@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Comprehensive backend API test for Spottr
-Tests all endpoints as specified in the review request
+Comprehensive backend test suite for Trainr Wave 1
+Tests all new endpoints plus regression checks
 """
-
 import requests
 import uuid
 import datetime
@@ -14,730 +13,761 @@ BASE_URL = "https://10d9856f-8745-4e2a-b8f9-16f23b1398cc.preview.emergentagent.c
 MONGO_URL = "mongodb://localhost:27017"
 DB_NAME = "spottr"
 
-# Test results tracking
-test_results = []
+# Initialize MongoDB
+client = MongoClient(MONGO_URL)
+db = client[DB_NAME]
 
-def log_test(test_name, passed, details=""):
-    """Log test result"""
-    status = "✅ PASS" if passed else "❌ FAIL"
-    print(f"{status}: {test_name}")
-    if details:
-        print(f"   Details: {details}")
-    test_results.append({"test": test_name, "passed": passed, "details": details})
+# Test data storage
+test_user_ids = []
+test_profile_ids = []
+test_session_tokens = []
 
-def setup_test_user():
-    """Create a test user and session in MongoDB"""
+def cleanup():
+    """Clean up all test data"""
+    print("\n🧹 Cleaning up test data...")
     try:
-        client = MongoClient(MONGO_URL)
-        db = client[DB_NAME]
-        
-        # Create test user
-        user_id = str(uuid.uuid4())
-        user = {
-            "id": user_id,
-            "email": "test@spottr.app",
-            "name": "Test User",
-            "picture": "",
-            "provider": "emergent",
-            "createdAt": datetime.datetime.utcnow()
-        }
-        
-        # Clear any existing test user
-        db.users.delete_many({"email": "test@spottr.app"})
-        db.users.insert_one(user)
-        
-        # Create session token
-        token = "test-token-" + uuid.uuid4().hex
-        session = {
-            "token": token,
-            "userId": user_id,
-            "createdAt": datetime.datetime.utcnow(),
-            "expiresAt": datetime.datetime.utcnow() + datetime.timedelta(days=7)
-        }
-        db.sessions.insert_one(session)
-        
-        print(f"✅ Test user created: {user_id}")
-        print(f"✅ Session token: {token}")
-        
-        return user_id, token
+        if test_user_ids:
+            db.users.delete_many({"id": {"$in": test_user_ids}})
+        if test_profile_ids:
+            db.profiles.delete_many({"id": {"$in": test_profile_ids}})
+        if test_session_tokens:
+            db.sessions.delete_many({"token": {"$in": test_session_tokens}})
+        # Clean up other test data
+        db.interactions.delete_many({"fromUserId": {"$in": test_user_ids}})
+        db.matches.delete_many({"$or": [{"userA": {"$in": test_user_ids}}, {"userB": {"$in": test_user_ids}}]})
+        db.messages.delete_many({"fromUserId": {"$in": test_user_ids}})
+        db.notifications.delete_many({"userId": {"$in": test_user_ids}})
+        db.reports.delete_many({"reporterId": {"$in": test_user_ids}})
+        db.blocks.delete_many({"blockerId": {"$in": test_user_ids}})
+        db.moderation_actions.delete_many({"userId": {"$in": test_user_ids}})
+        db.typing.delete_many({"userId": {"$in": test_user_ids}})
+        print("✅ Cleanup complete")
     except Exception as e:
-        print(f"❌ Failed to setup test user: {e}")
-        return None, None
+        print(f"⚠️ Cleanup error: {e}")
+
+def create_test_user_with_session(email, name="Test User", is_admin=False):
+    """Create a test user with session and profile"""
+    user_id = str(uuid.uuid4())
+    test_user_ids.append(user_id)
+    
+    user_doc = {
+        "id": user_id,
+        "email": email,
+        "name": name,
+        "picture": "",
+        "createdAt": datetime.datetime.utcnow()
+    }
+    db.users.insert_one(user_doc)
+    
+    token = "tok-" + uuid.uuid4().hex
+    test_session_tokens.append(token)
+    db.sessions.insert_one({
+        "token": token,
+        "userId": user_id,
+        "createdAt": datetime.datetime.utcnow(),
+        "expiresAt": datetime.datetime.utcnow() + datetime.timedelta(days=7)
+    })
+    
+    # Create profile
+    profile_id = str(uuid.uuid4())
+    test_profile_ids.append(profile_id)
+    profile_doc = {
+        "id": profile_id,
+        "userId": user_id,
+        "isSeed": False,
+        "name": name,
+        "age": 25,
+        "gender": "Male",
+        "city": "Mumbai",
+        "gymName": "Cult Fit",
+        "level": "Intermediate",
+        "goal": "Powerlifting",
+        "timing": "Early Morning",
+        "bio": "test bio",
+        "photos": ["photo1.jpg", "photo2.jpg", "photo3.jpg"],
+        "verified": False,
+        "verifications": {"selfie": False, "instagram": False, "gym": False},
+        "verificationRequests": {"selfie": "none", "instagram": "none", "gym": "none"},
+        "online": True,
+        "lastActiveAt": datetime.datetime.utcnow(),
+        "onboardingCompleted": True,
+        "createdAt": datetime.datetime.utcnow(),
+    }
+    db.profiles.insert_one(profile_doc)
+    
+    return user_id, token, profile_id
 
 def test_health_check():
-    """Test 1: GET /api/ -> {ok: true, app: 'spottr'}"""
+    """Test GET /api/ health check"""
+    print("\n🧪 Testing health check...")
     try:
-        response = requests.get(f"{BASE_URL}/api/")
-        data = response.json()
-        
-        passed = (
-            response.status_code == 200 and
-            data.get("ok") == True and
-            data.get("app") == "spottr"
-        )
-        log_test("Health check (GET /api/)", passed, f"Response: {data}")
-        return passed
+        r = requests.get(f"{BASE_URL}/api/")
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        data = r.json()
+        assert data.get("ok") == True, f"Expected ok=true, got {data}"
+        assert data.get("app") == "trainr", f"Expected app=trainr, got {data}"
+        print("✅ PASS - Health check working")
+        return True
     except Exception as e:
-        log_test("Health check (GET /api/)", False, str(e))
+        print(f"❌ FAIL - Health check: {e}")
         return False
 
-def test_auth_me_no_cookie():
-    """Test 2: GET /api/auth/me (no cookie) -> {user: null}, 200"""
+def test_auth_session_errors():
+    """Test POST /api/auth/session error handling"""
+    print("\n🧪 Testing auth session error handling...")
     try:
-        response = requests.get(f"{BASE_URL}/api/auth/me")
-        data = response.json()
+        # Missing sessionId
+        r = requests.post(f"{BASE_URL}/api/auth/session", json={})
+        assert r.status_code == 400, f"Expected 400 for missing sessionId, got {r.status_code}"
         
-        passed = (
-            response.status_code == 200 and
-            data.get("user") is None
-        )
-        log_test("Auth me without cookie", passed, f"Response: {data}")
-        return passed
+        # Invalid sessionId
+        r = requests.post(f"{BASE_URL}/api/auth/session", json={"sessionId": "invalid-session-id"})
+        assert r.status_code == 401, f"Expected 401 for invalid sessionId, got {r.status_code}"
+        
+        print("✅ PASS - Auth session error handling working")
+        return True
     except Exception as e:
-        log_test("Auth me without cookie", False, str(e))
+        print(f"❌ FAIL - Auth session errors: {e}")
         return False
 
-def test_auth_session_missing_sessionid():
-    """Test 3a: POST /api/auth/session (missing sessionId) -> 400"""
+def test_profile_photo_validation():
+    """Test POST /api/profile photo validation"""
+    print("\n🧪 Testing profile photo validation...")
     try:
-        response = requests.post(f"{BASE_URL}/api/auth/session", json={})
-        data = response.json()
-        
-        passed = (
-            response.status_code == 400 and
-            "Missing sessionId" in data.get("error", "")
-        )
-        log_test("Auth session missing sessionId", passed, f"Response: {data}")
-        return passed
-    except Exception as e:
-        log_test("Auth session missing sessionId", False, str(e))
-        return False
-
-def test_auth_session_invalid_sessionid():
-    """Test 3b: POST /api/auth/session (invalid sessionId) -> 401"""
-    try:
-        response = requests.post(f"{BASE_URL}/api/auth/session", json={"sessionId": "fake-id-123"})
-        data = response.json()
-        
-        passed = (
-            response.status_code == 401 and
-            "Invalid session" in data.get("error", "")
-        )
-        log_test("Auth session invalid sessionId", passed, f"Response: {data}")
-        return passed
-    except Exception as e:
-        log_test("Auth session invalid sessionId", False, str(e))
-        return False
-
-def test_auth_logout_no_cookie():
-    """Test 4: POST /api/auth/logout (no cookie) -> {ok: true}"""
-    try:
-        response = requests.post(f"{BASE_URL}/api/auth/logout")
-        data = response.json()
-        
-        passed = (
-            response.status_code == 200 and
-            data.get("ok") == True
-        )
-        log_test("Logout without cookie", passed, f"Response: {data}")
-        return passed
-    except Exception as e:
-        log_test("Logout without cookie", False, str(e))
-        return False
-
-def test_profile_me_no_cookie():
-    """Test 5: GET /api/profile/me without cookie -> 401"""
-    try:
-        response = requests.get(f"{BASE_URL}/api/profile/me")
-        data = response.json()
-        
-        passed = response.status_code == 401
-        log_test("Profile me without cookie", passed, f"Status: {response.status_code}, Response: {data}")
-        return passed
-    except Exception as e:
-        log_test("Profile me without cookie", False, str(e))
-        return False
-
-def test_profile_me_with_cookie_no_profile(token):
-    """Test 6: GET /api/profile/me with cookie but no profile -> {profile: null}"""
-    try:
+        user_id, token, profile_id = create_test_user_with_session("photo-test@trainr.app")
         cookies = {"spottr_session": token}
-        response = requests.get(f"{BASE_URL}/api/profile/me", cookies=cookies)
-        data = response.json()
         
-        passed = (
-            response.status_code == 200 and
-            data.get("profile") is None
-        )
-        log_test("Profile me with cookie but no profile", passed, f"Response: {data}")
-        return passed
+        # Less than 3 photos
+        r = requests.post(f"{BASE_URL}/api/profile", json={
+            "name": "Test", "age": 25, "gender": "Male", "city": "Mumbai",
+            "gymName": "Test Gym", "level": "Beginner", "goal": "Weight Loss",
+            "timing": "Morning", "photos": ["a", "b"]
+        }, cookies=cookies)
+        assert r.status_code == 400, f"Expected 400 for <3 photos, got {r.status_code}"
+        
+        # More than 5 photos
+        r = requests.post(f"{BASE_URL}/api/profile", json={
+            "name": "Test", "age": 25, "gender": "Male", "city": "Mumbai",
+            "gymName": "Test Gym", "level": "Beginner", "goal": "Weight Loss",
+            "timing": "Morning", "photos": ["a", "b", "c", "d", "e", "f"]
+        }, cookies=cookies)
+        assert r.status_code == 400, f"Expected 400 for >5 photos, got {r.status_code}"
+        
+        # Valid 3-5 photos
+        r = requests.post(f"{BASE_URL}/api/profile", json={
+            "name": "Test", "age": 25, "gender": "Male", "city": "Mumbai",
+            "gymName": "Test Gym", "level": "Beginner", "goal": "Weight Loss",
+            "timing": "Morning", "photos": ["a", "b", "c"]
+        }, cookies=cookies)
+        assert r.status_code == 200, f"Expected 200 for valid photos, got {r.status_code}"
+        
+        print("✅ PASS - Profile photo validation working")
+        return True
     except Exception as e:
-        log_test("Profile me with cookie but no profile", False, str(e))
+        print(f"❌ FAIL - Profile photo validation: {e}")
         return False
 
-def test_create_profile_no_cookie():
-    """Test 7: POST /api/profile without cookie -> 401"""
+def test_verify_selfie():
+    """Test POST /api/profile/verify-selfie"""
+    print("\n🧪 Testing verify-selfie endpoint...")
     try:
-        profile_data = {
-            "name": "John Doe",
-            "age": 28,
-            "gender": "Male",
-            "city": "San Francisco",
-            "gymName": "Gold's Gym",
-            "level": "Intermediate",
-            "goal": "Bodybuilding",
-            "timing": "Morning",
-            "bio": "Looking for workout partners",
-            "photos": ["https://example.com/photo1.jpg", "https://example.com/photo2.jpg"]
-        }
-        response = requests.post(f"{BASE_URL}/api/profile", json=profile_data)
-        data = response.json()
-        
-        passed = response.status_code == 401
-        log_test("Create profile without cookie", passed, f"Status: {response.status_code}")
-        return passed
-    except Exception as e:
-        log_test("Create profile without cookie", False, str(e))
-        return False
-
-def test_create_profile_valid(token):
-    """Test 8: POST /api/profile with valid data -> {profile: {...}}"""
-    try:
+        user_id, token, profile_id = create_test_user_with_session("selfie-test@trainr.app")
         cookies = {"spottr_session": token}
-        profile_data = {
-            "name": "John Doe",
-            "age": 28,
-            "gender": "Male",
-            "city": "San Francisco",
-            "gymName": "Gold's Gym",
-            "level": "Intermediate",
-            "goal": "Bodybuilding",
-            "timing": "Morning",
-            "bio": "Looking for workout partners",
-            "photos": ["https://example.com/photo1.jpg", "https://example.com/photo2.jpg"]
-        }
-        response = requests.post(f"{BASE_URL}/api/profile", json=profile_data, cookies=cookies)
-        data = response.json()
         
-        passed = (
-            response.status_code == 200 and
-            "profile" in data and
-            data["profile"].get("name") == "John Doe"
-        )
-        log_test("Create profile with valid data", passed, f"Profile created: {data.get('profile', {}).get('id')}")
-        return passed
+        # Invalid selfie data
+        r = requests.post(f"{BASE_URL}/api/profile/verify-selfie", json={"selfie": "invalid"}, cookies=cookies)
+        assert r.status_code == 400, f"Expected 400 for invalid selfie, got {r.status_code}"
+        
+        # Valid selfie
+        r = requests.post(f"{BASE_URL}/api/profile/verify-selfie", json={
+            "selfie": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        }, cookies=cookies)
+        assert r.status_code == 200, f"Expected 200 for valid selfie, got {r.status_code}"
+        
+        print("✅ PASS - Verify selfie working")
+        return True
     except Exception as e:
-        log_test("Create profile with valid data", False, str(e))
+        print(f"❌ FAIL - Verify selfie: {e}")
         return False
 
-def test_create_profile_too_few_photos(token):
-    """Test 9: POST /api/profile with 1 photo -> 400"""
+def test_location_capture():
+    """Test POST /api/profile/location"""
+    print("\n🧪 Testing location capture...")
     try:
+        user_id, token, profile_id = create_test_user_with_session("location-test@trainr.app")
         cookies = {"spottr_session": token}
-        profile_data = {
-            "name": "Jane Doe",
-            "photos": ["https://example.com/photo1.jpg"]
-        }
-        response = requests.post(f"{BASE_URL}/api/profile", json=profile_data, cookies=cookies)
-        data = response.json()
         
-        passed = (
-            response.status_code == 400 and
-            "At least 2 photos required" in data.get("error", "")
-        )
-        log_test("Create profile with 1 photo", passed, f"Response: {data}")
-        return passed
+        # Without cookie
+        r = requests.post(f"{BASE_URL}/api/profile/location", json={"lat": 19.07, "lng": 72.87})
+        assert r.status_code == 401, f"Expected 401 without auth, got {r.status_code}"
+        
+        # Invalid lat (string)
+        r = requests.post(f"{BASE_URL}/api/profile/location", json={"lat": "abc", "lng": 72.87}, cookies=cookies)
+        assert r.status_code == 400, f"Expected 400 for invalid lat, got {r.status_code}"
+        
+        # Valid location
+        r = requests.post(f"{BASE_URL}/api/profile/location", json={"lat": 19.07, "lng": 72.87}, cookies=cookies)
+        assert r.status_code == 200, f"Expected 200 for valid location, got {r.status_code}"
+        
+        # Verify in DB
+        profile = db.profiles.find_one({"id": profile_id})
+        assert profile.get("location") is not None, "Location not saved in DB"
+        assert profile["location"]["lat"] == 19.07, f"Expected lat 19.07, got {profile['location']['lat']}"
+        assert profile["location"]["lng"] == 72.87, f"Expected lng 72.87, got {profile['location']['lng']}"
+        
+        print("✅ PASS - Location capture working")
+        return True
     except Exception as e:
-        log_test("Create profile with 1 photo", False, str(e))
+        print(f"❌ FAIL - Location capture: {e}")
         return False
 
-def test_create_profile_too_many_photos(token):
-    """Test 10: POST /api/profile with 6 photos -> 400"""
+def test_discover_match_reasons():
+    """Test GET /api/profiles/discover with matchReasons"""
+    print("\n🧪 Testing discover with matchReasons...")
     try:
+        user_id, token, profile_id = create_test_user_with_session("discover-test@trainr.app", "Discover Tester")
         cookies = {"spottr_session": token}
-        profile_data = {
-            "name": "Jane Doe",
-            "photos": [f"https://example.com/photo{i}.jpg" for i in range(1, 7)]
-        }
-        response = requests.post(f"{BASE_URL}/api/profile", json=profile_data, cookies=cookies)
-        data = response.json()
         
-        passed = (
-            response.status_code == 400 and
-            "Maximum 5 photos allowed" in data.get("error", "")
-        )
-        log_test("Create profile with 6 photos", passed, f"Response: {data}")
-        return passed
-    except Exception as e:
-        log_test("Create profile with 6 photos", False, str(e))
-        return False
-
-def test_discover_no_auth():
-    """Test 11: GET /api/profiles/discover (no auth) -> returns array of profiles"""
-    try:
-        response = requests.get(f"{BASE_URL}/api/profiles/discover")
-        data = response.json()
-        
-        passed = (
-            response.status_code == 200 and
-            "profiles" in data and
-            isinstance(data["profiles"], list) and
-            len(data["profiles"]) >= 20
-        )
-        log_test("Discover profiles without auth", passed, f"Found {len(data.get('profiles', []))} profiles")
-        return passed
-    except Exception as e:
-        log_test("Discover profiles without auth", False, str(e))
-        return False
-
-def test_discover_filter_goal():
-    """Test 12: GET /api/profiles/discover?goal=Powerlifting -> only Powerlifting profiles"""
-    try:
-        response = requests.get(f"{BASE_URL}/api/profiles/discover?goal=Powerlifting")
-        data = response.json()
+        r = requests.get(f"{BASE_URL}/api/profiles/discover", cookies=cookies)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        data = r.json()
         profiles = data.get("profiles", [])
+        assert len(profiles) > 0, "Expected at least one profile"
         
-        all_powerlifting = all(p.get("goal") == "Powerlifting" for p in profiles)
-        passed = (
-            response.status_code == 200 and
-            all_powerlifting
-        )
-        log_test("Discover with goal filter", passed, f"Found {len(profiles)} Powerlifting profiles")
-        return passed
+        # Check that at least one profile has matchReasons
+        has_match_reasons = False
+        for p in profiles:
+            if "matchReasons" in p and len(p["matchReasons"]) > 0:
+                has_match_reasons = True
+                print(f"  Found profile with {len(p['matchReasons'])} match reasons: {p['matchReasons']}")
+                break
+        
+        assert has_match_reasons, "Expected at least one profile with matchReasons"
+        
+        print("✅ PASS - Discover matchReasons working")
+        return True
     except Exception as e:
-        log_test("Discover with goal filter", False, str(e))
+        print(f"❌ FAIL - Discover matchReasons: {e}")
         return False
 
-def test_discover_filter_gender():
-    """Test 13: GET /api/profiles/discover?gender=Female -> only Female profiles"""
+def test_discover_filters():
+    """Test GET /api/profiles/discover filters (recentlyActive, maxDistance, gym)"""
+    print("\n🧪 Testing discover filters...")
     try:
-        response = requests.get(f"{BASE_URL}/api/profiles/discover?gender=Female")
-        data = response.json()
+        user_id, token, profile_id = create_test_user_with_session("filter-test@trainr.app")
+        cookies = {"spottr_session": token}
+        
+        # Set location for distance filter
+        requests.post(f"{BASE_URL}/api/profile/location", json={"lat": 19.07, "lng": 72.87}, cookies=cookies)
+        
+        # Test recentlyActive filter
+        r = requests.get(f"{BASE_URL}/api/profiles/discover?recentlyActive=true", cookies=cookies)
+        assert r.status_code == 200, f"Expected 200 for recentlyActive, got {r.status_code}"
+        data = r.json()
+        print(f"  recentlyActive=true returned {len(data.get('profiles', []))} profiles")
+        
+        # Test maxDistance filter
+        r = requests.get(f"{BASE_URL}/api/profiles/discover?maxDistance=10", cookies=cookies)
+        assert r.status_code == 200, f"Expected 200 for maxDistance, got {r.status_code}"
+        data = r.json()
+        print(f"  maxDistance=10 returned {len(data.get('profiles', []))} profiles")
+        
+        # Test gym filter
+        r = requests.get(f"{BASE_URL}/api/profiles/discover?gym=Cult", cookies=cookies)
+        assert r.status_code == 200, f"Expected 200 for gym filter, got {r.status_code}"
+        data = r.json()
         profiles = data.get("profiles", [])
+        print(f"  gym=Cult returned {len(profiles)} profiles")
+        # Verify all returned profiles have "Cult" in gymName
+        for p in profiles:
+            assert "cult" in p.get("gymName", "").lower(), f"Profile {p['id']} doesn't match gym filter"
         
-        all_female = all(p.get("gender") == "Female" for p in profiles)
-        passed = (
-            response.status_code == 200 and
-            all_female
-        )
-        log_test("Discover with gender filter", passed, f"Found {len(profiles)} Female profiles")
-        return passed
+        print("✅ PASS - Discover filters working")
+        return True
     except Exception as e:
-        log_test("Discover with gender filter", False, str(e))
+        print(f"❌ FAIL - Discover filters: {e}")
         return False
 
-def test_discover_filter_verified():
-    """Test 14: GET /api/profiles/discover?verifiedOnly=true -> only verified profiles"""
+def test_notifications():
+    """Test GET /api/notifications and POST /api/notifications/read"""
+    print("\n🧪 Testing notifications...")
     try:
-        response = requests.get(f"{BASE_URL}/api/profiles/discover?verifiedOnly=true")
-        data = response.json()
-        profiles = data.get("profiles", [])
-        
-        all_verified = all(p.get("verified") == True for p in profiles)
-        passed = (
-            response.status_code == 200 and
-            all_verified
-        )
-        log_test("Discover with verified filter", passed, f"Found {len(profiles)} verified profiles")
-        return passed
-    except Exception as e:
-        log_test("Discover with verified filter", False, str(e))
-        return False
-
-def test_like_no_auth():
-    """Test 15: POST /api/profiles/like without cookie -> 401"""
-    try:
-        response = requests.post(f"{BASE_URL}/api/profiles/like", json={"profileId": "fake-id"})
-        data = response.json()
-        
-        passed = response.status_code == 401
-        log_test("Like profile without auth", passed, f"Status: {response.status_code}")
-        return passed
-    except Exception as e:
-        log_test("Like profile without auth", False, str(e))
-        return False
-
-def test_like_with_auth(token):
-    """Test 16: POST /api/profiles/like with auth -> {ok:true, matched:false}"""
-    try:
-        # First get a profile to like
-        response = requests.get(f"{BASE_URL}/api/profiles/discover")
-        profiles = response.json().get("profiles", [])
-        
-        if not profiles:
-            log_test("Like profile with auth", False, "No profiles available to like")
-            return False
-        
-        profile_id = profiles[0]["id"]
+        user_id, token, profile_id = create_test_user_with_session("notif-test@trainr.app")
         cookies = {"spottr_session": token}
-        response = requests.post(f"{BASE_URL}/api/profiles/like", json={"profileId": profile_id}, cookies=cookies)
-        data = response.json()
         
-        passed = (
-            response.status_code == 200 and
-            data.get("ok") == True and
-            "matched" in data
-        )
-        log_test("Like profile with auth", passed, f"Response: {data}")
-        return passed, profile_id
+        # Without cookie
+        r = requests.get(f"{BASE_URL}/api/notifications")
+        assert r.status_code == 401, f"Expected 401 without auth, got {r.status_code}"
+        
+        # With cookie (initially empty)
+        r = requests.get(f"{BASE_URL}/api/notifications", cookies=cookies)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        data = r.json()
+        assert "notifications" in data, "Expected notifications array"
+        assert "unread" in data, "Expected unread count"
+        print(f"  Initial notifications: {len(data['notifications'])}, unread: {data['unread']}")
+        
+        # Mark all as read without cookie
+        r = requests.post(f"{BASE_URL}/api/notifications/read", json={})
+        assert r.status_code == 401, f"Expected 401 without auth, got {r.status_code}"
+        
+        # Mark all as read with cookie
+        r = requests.post(f"{BASE_URL}/api/notifications/read", json={}, cookies=cookies)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        print("✅ PASS - Notifications working")
+        return True
     except Exception as e:
-        log_test("Like profile with auth", False, str(e))
-        return False, None
-
-def test_skip_with_auth(token):
-    """Test 17: POST /api/profiles/skip with auth -> {ok:true}"""
-    try:
-        # Get a profile to skip
-        response = requests.get(f"{BASE_URL}/api/profiles/discover")
-        profiles = response.json().get("profiles", [])
-        
-        if not profiles:
-            log_test("Skip profile with auth", False, "No profiles available to skip")
-            return False, None
-        
-        profile_id = profiles[0]["id"]
-        cookies = {"spottr_session": token}
-        response = requests.post(f"{BASE_URL}/api/profiles/skip", json={"profileId": profile_id}, cookies=cookies)
-        data = response.json()
-        
-        passed = (
-            response.status_code == 200 and
-            data.get("ok") == True
-        )
-        log_test("Skip profile with auth", passed, f"Skipped profile: {profile_id}")
-        return passed, profile_id
-    except Exception as e:
-        log_test("Skip profile with auth", False, str(e))
-        return False, None
-
-def test_discover_excludes_interacted(token, liked_id, skipped_id):
-    """Test: Discover should exclude liked/skipped profiles when authenticated"""
-    try:
-        cookies = {"spottr_session": token}
-        response = requests.get(f"{BASE_URL}/api/profiles/discover", cookies=cookies)
-        data = response.json()
-        profiles = data.get("profiles", [])
-        
-        profile_ids = [p["id"] for p in profiles]
-        excludes_liked = liked_id not in profile_ids
-        excludes_skipped = skipped_id not in profile_ids
-        
-        passed = excludes_liked and excludes_skipped
-        log_test("Discover excludes interacted profiles", passed, 
-                f"Liked excluded: {excludes_liked}, Skipped excluded: {excludes_skipped}")
-        return passed
-    except Exception as e:
-        log_test("Discover excludes interacted profiles", False, str(e))
+        print(f"❌ FAIL - Notifications: {e}")
         return False
 
-def test_matches_no_auth():
-    """Test 18: GET /api/matches (no cookie) -> 401"""
+def test_verify_request():
+    """Test POST /api/profile/verify-request"""
+    print("\n🧪 Testing verify-request...")
     try:
-        response = requests.get(f"{BASE_URL}/api/matches")
-        data = response.json()
+        user_id, token, profile_id = create_test_user_with_session("verify-req-test@trainr.app")
+        cookies = {"spottr_session": token}
         
-        passed = response.status_code == 401
-        log_test("Matches without auth", passed, f"Status: {response.status_code}")
-        return passed
+        # Without cookie
+        r = requests.post(f"{BASE_URL}/api/profile/verify-request", json={"type": "gym"})
+        assert r.status_code == 401, f"Expected 401 without auth, got {r.status_code}"
+        
+        # Invalid type
+        r = requests.post(f"{BASE_URL}/api/profile/verify-request", json={"type": "foo"}, cookies=cookies)
+        assert r.status_code == 400, f"Expected 400 for invalid type, got {r.status_code}"
+        
+        # Valid gym verification
+        r = requests.post(f"{BASE_URL}/api/profile/verify-request", json={"type": "gym"}, cookies=cookies)
+        assert r.status_code == 200, f"Expected 200 for gym verification, got {r.status_code}"
+        
+        # Verify in DB
+        profile = db.profiles.find_one({"id": profile_id})
+        assert profile["verifications"]["gym"] == True, "Gym verification not set"
+        assert profile["verified"] == True, "Profile not marked as verified"
+        
+        # Check notification created
+        notif = db.notifications.find_one({"userId": user_id, "type": "verification_approved"})
+        assert notif is not None, "Verification notification not created"
+        print(f"  Notification created: {notif['title']}")
+        
+        # Valid instagram verification
+        r = requests.post(f"{BASE_URL}/api/profile/verify-request", json={"type": "instagram"}, cookies=cookies)
+        assert r.status_code == 200, f"Expected 200 for instagram verification, got {r.status_code}"
+        
+        profile = db.profiles.find_one({"id": profile_id})
+        assert profile["verifications"]["instagram"] == True, "Instagram verification not set"
+        
+        print("✅ PASS - Verify request working")
+        return True
     except Exception as e:
-        log_test("Matches without auth", False, str(e))
+        print(f"❌ FAIL - Verify request: {e}")
         return False
 
-def test_matches_with_auth(token):
-    """Test 19: GET /api/matches with auth -> {matches: []}"""
+def test_like_mutual_match_notifications():
+    """Test POST /api/profiles/like with mutual match and notifications"""
+    print("\n🧪 Testing like with mutual match and notifications...")
     try:
-        cookies = {"spottr_session": token}
-        response = requests.get(f"{BASE_URL}/api/matches", cookies=cookies)
-        data = response.json()
+        # Create two users
+        user_a_id, token_a, profile_a_id = create_test_user_with_session("user-a@trainr.app", "User A")
+        user_b_id, token_b, profile_b_id = create_test_user_with_session("user-b@trainr.app", "User B")
+        cookies_a = {"spottr_session": token_a}
+        cookies_b = {"spottr_session": token_b}
         
-        passed = (
-            response.status_code == 200 and
-            "matches" in data and
-            isinstance(data["matches"], list)
-        )
-        log_test("Matches with auth", passed, f"Found {len(data.get('matches', []))} matches")
-        return passed
+        # User A likes User B
+        r = requests.post(f"{BASE_URL}/api/profiles/like", json={"profileId": profile_b_id}, cookies=cookies_a)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        data = r.json()
+        assert data.get("matched") == False, f"Expected matched=false, got {data}"
+        
+        # Check connect_request notification for User B
+        notif = db.notifications.find_one({"userId": user_b_id, "type": "connect_request"})
+        assert notif is not None, "Connect request notification not created"
+        print(f"  Connect request notification: {notif['title']}")
+        
+        # User B likes User A back (mutual match)
+        r = requests.post(f"{BASE_URL}/api/profiles/like", json={"profileId": profile_a_id}, cookies=cookies_b)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        data = r.json()
+        assert data.get("matched") == True, f"Expected matched=true, got {data}"
+        assert "matchId" in data, "Expected matchId in response"
+        match_id = data["matchId"]
+        print(f"  Match created: {match_id}")
+        
+        # Check new_match notifications for both users
+        notif_a = db.notifications.find_one({"userId": user_a_id, "type": "new_match"})
+        notif_b = db.notifications.find_one({"userId": user_b_id, "type": "new_match"})
+        assert notif_a is not None, "New match notification not created for User A"
+        assert notif_b is not None, "New match notification not created for User B"
+        print(f"  New match notifications created for both users")
+        
+        print("✅ PASS - Like mutual match notifications working")
+        return True
     except Exception as e:
-        log_test("Matches with auth", False, str(e))
+        print(f"❌ FAIL - Like mutual match notifications: {e}")
         return False
 
-def test_messages_get(token):
-    """Test 20: GET /api/messages?matchId=fake -> {messages: []}"""
+def test_messages_rate_limit_moderation():
+    """Test POST /api/messages with rate limit and moderation"""
+    print("\n🧪 Testing messages rate limit and moderation...")
     try:
-        cookies = {"spottr_session": token}
-        response = requests.get(f"{BASE_URL}/api/messages?matchId=fake-match-id", cookies=cookies)
-        data = response.json()
+        # Create two users and a match
+        user_a_id, token_a, profile_a_id = create_test_user_with_session("msg-a@trainr.app", "Msg User A")
+        user_b_id, token_b, profile_b_id = create_test_user_with_session("msg-b@trainr.app", "Msg User B")
+        cookies_a = {"spottr_session": token_a}
         
-        passed = (
-            response.status_code == 200 and
-            "messages" in data and
-            isinstance(data["messages"], list)
-        )
-        log_test("Get messages with fake matchId", passed, f"Response: {data}")
-        return passed
-    except Exception as e:
-        log_test("Get messages with fake matchId", False, str(e))
-        return False
-
-def test_messages_post_normal(token):
-    """Test 21: POST /api/messages with normal text -> {message: {flagged:false}}"""
-    try:
-        cookies = {"spottr_session": token}
-        message_data = {
-            "matchId": "fake-match-id",
-            "text": "Hey, want to hit the gym tomorrow?"
-        }
-        response = requests.post(f"{BASE_URL}/api/messages", json=message_data, cookies=cookies)
-        data = response.json()
+        # Create mutual match
+        requests.post(f"{BASE_URL}/api/profiles/like", json={"profileId": profile_b_id}, cookies=cookies_a)
+        requests.post(f"{BASE_URL}/api/profiles/like", json={"profileId": profile_a_id}, cookies={"spottr_session": token_b})
         
-        passed = (
-            response.status_code == 200 and
-            "message" in data and
-            data["message"].get("flagged") == False
-        )
-        log_test("Post normal message", passed, f"Message flagged: {data.get('message', {}).get('flagged')}")
-        return passed
-    except Exception as e:
-        log_test("Post normal message", False, str(e))
-        return False
-
-def test_messages_post_inappropriate(token):
-    """Test 22: POST /api/messages with 'send nudes' -> {message: {flagged:true}}"""
-    try:
-        cookies = {"spottr_session": token}
-        message_data = {
-            "matchId": "fake-match-id",
-            "text": "Hey can you send nudes?"
-        }
-        response = requests.post(f"{BASE_URL}/api/messages", json=message_data, cookies=cookies)
-        data = response.json()
+        # Get match ID
+        r = requests.get(f"{BASE_URL}/api/matches", cookies=cookies_a)
+        matches = r.json().get("matches", [])
+        assert len(matches) > 0, "No match found"
+        match_id = matches[0]["id"]
         
-        passed = (
-            response.status_code == 200 and
-            "message" in data and
-            data["message"].get("flagged") == True
-        )
+        # Send normal message
+        r = requests.post(f"{BASE_URL}/api/messages", json={
+            "matchId": match_id,
+            "text": "Hello, let's workout together!"
+        }, cookies=cookies_a)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        data = r.json()
+        assert data["message"]["flagged"] == False, "Normal message should not be flagged"
+        print(f"  Normal message sent successfully")
         
-        # Check if moderation_actions was created
-        if passed:
-            client = MongoClient(MONGO_URL)
-            db = client[DB_NAME]
-            message_id = data["message"]["id"]
-            moderation = db.moderation_actions.find_one({"messageId": message_id})
-            if not moderation:
-                passed = False
-                log_test("Post inappropriate message", False, "Moderation action not created")
+        # Send message with banned word
+        r = requests.post(f"{BASE_URL}/api/messages", json={
+            "matchId": match_id,
+            "text": "send nudes please"
+        }, cookies=cookies_a)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        data = r.json()
+        assert data["message"]["flagged"] == True, "Banned word message should be flagged"
+        print(f"  Banned word message flagged correctly")
+        
+        # Check moderation_actions created
+        mod_action = db.moderation_actions.find_one({"userId": user_a_id, "type": "inappropriate_message"})
+        assert mod_action is not None, "Moderation action not created"
+        print(f"  Moderation action created")
+        
+        # Send 2 more banned-word messages (total 3 strikes)
+        requests.post(f"{BASE_URL}/api/messages", json={"matchId": match_id, "text": "send pics"}, cookies=cookies_a)
+        requests.post(f"{BASE_URL}/api/messages", json={"matchId": match_id, "text": "sexy time"}, cookies=cookies_a)
+        
+        # Check user is banned after 3 strikes
+        user = db.users.find_one({"id": user_a_id})
+        assert user.get("banned") == True, "User should be banned after 3 strikes"
+        print(f"  User banned after 3 strikes")
+        
+        # Test rate limit (31 messages in 10 min)
+        user_c_id, token_c, profile_c_id = create_test_user_with_session("msg-c@trainr.app", "Msg User C")
+        user_d_id, token_d, profile_d_id = create_test_user_with_session("msg-d@trainr.app", "Msg User D")
+        cookies_c = {"spottr_session": token_c}
+        
+        # Create match
+        requests.post(f"{BASE_URL}/api/profiles/like", json={"profileId": profile_d_id}, cookies=cookies_c)
+        requests.post(f"{BASE_URL}/api/profiles/like", json={"profileId": profile_c_id}, cookies={"spottr_session": token_d})
+        
+        r = requests.get(f"{BASE_URL}/api/matches", cookies=cookies_c)
+        matches = r.json().get("matches", [])
+        match_id_2 = matches[0]["id"]
+        
+        # Send 31 messages
+        for i in range(31):
+            r = requests.post(f"{BASE_URL}/api/messages", json={
+                "matchId": match_id_2,
+                "text": f"Message {i+1}"
+            }, cookies=cookies_c)
+            if i < 30:
+                assert r.status_code == 200, f"Expected 200 for message {i+1}, got {r.status_code}"
             else:
-                log_test("Post inappropriate message", True, f"Message flagged and moderation action created")
-        else:
-            log_test("Post inappropriate message", False, f"Message not flagged: {data}")
+                # 31st message should be rate limited
+                assert r.status_code == 429, f"Expected 429 for message 31, got {r.status_code}"
+                print(f"  Rate limit triggered on message 31")
         
-        return passed
+        print("✅ PASS - Messages rate limit and moderation working")
+        return True
     except Exception as e:
-        log_test("Post inappropriate message", False, str(e))
+        print(f"❌ FAIL - Messages rate limit and moderation: {e}")
         return False
 
-def test_messages_post_no_text(token):
-    """Test 23: POST /api/messages without text -> 400"""
+def test_messages_read_typing():
+    """Test GET /api/messages auto-read and typing indicator"""
+    print("\n🧪 Testing messages auto-read and typing...")
     try:
+        # Create two users and a match
+        user_a_id, token_a, profile_a_id = create_test_user_with_session("read-a@trainr.app", "Read User A")
+        user_b_id, token_b, profile_b_id = create_test_user_with_session("read-b@trainr.app", "Read User B")
+        cookies_a = {"spottr_session": token_a}
+        cookies_b = {"spottr_session": token_b}
+        
+        # Create mutual match
+        requests.post(f"{BASE_URL}/api/profiles/like", json={"profileId": profile_b_id}, cookies=cookies_a)
+        requests.post(f"{BASE_URL}/api/profiles/like", json={"profileId": profile_a_id}, cookies=cookies_b)
+        
+        r = requests.get(f"{BASE_URL}/api/matches", cookies=cookies_a)
+        matches = r.json().get("matches", [])
+        match_id = matches[0]["id"]
+        
+        # User A sends message
+        requests.post(f"{BASE_URL}/api/messages", json={
+            "matchId": match_id,
+            "text": "Hello from A"
+        }, cookies=cookies_a)
+        
+        # User B fetches messages (should auto-mark as read)
+        r = requests.get(f"{BASE_URL}/api/messages?matchId={match_id}", cookies=cookies_b)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        data = r.json()
+        assert "messages" in data, "Expected messages array"
+        assert "otherTyping" in data, "Expected otherTyping field"
+        assert data["otherTyping"] == False, "Expected otherTyping=false initially"
+        
+        # Check message is marked as read by User B
+        msg = db.messages.find_one({"matchId": match_id, "fromUserId": user_a_id})
+        assert user_b_id in msg.get("readBy", []), "Message not marked as read by User B"
+        print(f"  Message auto-marked as read")
+        
+        # Test forbidden access (user not in match)
+        user_c_id, token_c, profile_c_id = create_test_user_with_session("read-c@trainr.app", "Read User C")
+        cookies_c = {"spottr_session": token_c}
+        
+        r = requests.get(f"{BASE_URL}/api/messages?matchId={match_id}", cookies=cookies_c)
+        assert r.status_code == 403, f"Expected 403 for non-participant, got {r.status_code}"
+        print(f"  Forbidden access blocked correctly")
+        
+        # Test typing indicator
+        r = requests.post(f"{BASE_URL}/api/messages/typing", json={"matchId": match_id}, cookies=cookies_a)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        
+        # Check typing record in DB
+        typing = db.typing.find_one({"matchId": match_id, "userId": user_a_id})
+        assert typing is not None, "Typing record not created"
+        print(f"  Typing indicator set")
+        
+        # User B should see otherTyping=true
+        r = requests.get(f"{BASE_URL}/api/messages?matchId={match_id}", cookies=cookies_b)
+        data = r.json()
+        assert data["otherTyping"] == True, "Expected otherTyping=true"
+        print(f"  Other user sees typing indicator")
+        
+        print("✅ PASS - Messages auto-read and typing working")
+        return True
+    except Exception as e:
+        print(f"❌ FAIL - Messages auto-read and typing: {e}")
+        return False
+
+def test_matches_unread_last_message():
+    """Test GET /api/matches with unreadCount and lastMessage"""
+    print("\n🧪 Testing matches with unreadCount and lastMessage...")
+    try:
+        # Create two users and a match
+        user_a_id, token_a, profile_a_id = create_test_user_with_session("match-a@trainr.app", "Match User A")
+        user_b_id, token_b, profile_b_id = create_test_user_with_session("match-b@trainr.app", "Match User B")
+        cookies_a = {"spottr_session": token_a}
+        cookies_b = {"spottr_session": token_b}
+        
+        # Create mutual match
+        requests.post(f"{BASE_URL}/api/profiles/like", json={"profileId": profile_b_id}, cookies=cookies_a)
+        requests.post(f"{BASE_URL}/api/profiles/like", json={"profileId": profile_a_id}, cookies=cookies_b)
+        
+        r = requests.get(f"{BASE_URL}/api/matches", cookies=cookies_a)
+        matches = r.json().get("matches", [])
+        match_id = matches[0]["id"]
+        
+        # User A sends 2 messages
+        requests.post(f"{BASE_URL}/api/messages", json={"matchId": match_id, "text": "Message 1"}, cookies=cookies_a)
+        requests.post(f"{BASE_URL}/api/messages", json={"matchId": match_id, "text": "Message 2"}, cookies=cookies_a)
+        
+        # User B fetches matches (should see unreadCount=2 and lastMessage)
+        r = requests.get(f"{BASE_URL}/api/matches", cookies=cookies_b)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        data = r.json()
+        matches = data.get("matches", [])
+        assert len(matches) > 0, "No matches found"
+        
+        match = matches[0]
+        assert "unreadCount" in match, "Expected unreadCount field"
+        assert match["unreadCount"] == 2, f"Expected unreadCount=2, got {match['unreadCount']}"
+        assert "lastMessage" in match, "Expected lastMessage field"
+        assert match["lastMessage"]["text"] == "Message 2", f"Expected 'Message 2', got {match['lastMessage']['text']}"
+        assert match["lastMessage"]["fromMe"] == False, f"Expected fromMe=false, got {match['lastMessage']['fromMe']}"
+        print(f"  unreadCount={match['unreadCount']}, lastMessage={match['lastMessage']['text']}")
+        
+        print("✅ PASS - Matches unreadCount and lastMessage working")
+        return True
+    except Exception as e:
+        print(f"❌ FAIL - Matches unreadCount and lastMessage: {e}")
+        return False
+
+def test_admin_endpoints():
+    """Test admin endpoints"""
+    print("\n🧪 Testing admin endpoints...")
+    try:
+        # Create non-admin user
+        user_id, token, profile_id = create_test_user_with_session("nonadmin@trainr.app")
         cookies = {"spottr_session": token}
-        message_data = {
-            "matchId": "fake-match-id"
-        }
-        response = requests.post(f"{BASE_URL}/api/messages", json=message_data, cookies=cookies)
-        data = response.json()
         
-        passed = response.status_code == 400
-        log_test("Post message without text", passed, f"Status: {response.status_code}")
-        return passed
+        # Non-admin should get 403
+        r = requests.get(f"{BASE_URL}/api/admin/stats", cookies=cookies)
+        assert r.status_code == 403, f"Expected 403 for non-admin, got {r.status_code}"
+        print(f"  Non-admin blocked correctly")
+        
+        # Create admin user
+        admin_id, admin_token, admin_profile_id = create_test_user_with_session("hello@trainr.in", "Admin User", is_admin=True)
+        admin_cookies = {"spottr_session": admin_token}
+        
+        # Test GET /api/admin/stats
+        r = requests.get(f"{BASE_URL}/api/admin/stats", cookies=admin_cookies)
+        assert r.status_code == 200, f"Expected 200 for admin stats, got {r.status_code}"
+        data = r.json()
+        assert "stats" in data, "Expected stats object"
+        stats = data["stats"]
+        assert "users" in stats, "Expected users count"
+        assert "profiles" in stats, "Expected profiles count"
+        assert "matches" in stats, "Expected matches count"
+        assert "messages" in stats, "Expected messages count"
+        assert "openReports" in stats, "Expected openReports count"
+        assert "banned" in stats, "Expected banned count"
+        assert "verified" in stats, "Expected verified count"
+        assert "activeNow" in stats, "Expected activeNow count"
+        print(f"  Admin stats: {stats}")
+        
+        # Test GET /api/admin/users
+        r = requests.get(f"{BASE_URL}/api/admin/users", cookies=admin_cookies)
+        assert r.status_code == 200, f"Expected 200 for admin users, got {r.status_code}"
+        data = r.json()
+        assert "users" in data, "Expected users array"
+        print(f"  Admin users: {len(data['users'])} users")
+        
+        # Test GET /api/admin/reports
+        r = requests.get(f"{BASE_URL}/api/admin/reports", cookies=admin_cookies)
+        assert r.status_code == 200, f"Expected 200 for admin reports, got {r.status_code}"
+        data = r.json()
+        assert "reports" in data, "Expected reports array"
+        print(f"  Admin reports: {len(data['reports'])} reports")
+        
+        # Test POST /api/admin/ban
+        test_user_id, test_token, test_profile_id = create_test_user_with_session("toban@trainr.app")
+        r = requests.post(f"{BASE_URL}/api/admin/ban", json={"userId": test_user_id}, cookies=admin_cookies)
+        assert r.status_code == 200, f"Expected 200 for ban, got {r.status_code}"
+        
+        # Verify user is banned
+        user = db.users.find_one({"id": test_user_id})
+        assert user.get("banned") == True, "User not banned"
+        print(f"  User banned successfully")
+        
+        # Test POST /api/admin/unban
+        r = requests.post(f"{BASE_URL}/api/admin/unban", json={"userId": test_user_id}, cookies=admin_cookies)
+        assert r.status_code == 200, f"Expected 200 for unban, got {r.status_code}"
+        
+        # Verify user is unbanned
+        user = db.users.find_one({"id": test_user_id})
+        assert user.get("banned") == False, "User not unbanned"
+        print(f"  User unbanned successfully")
+        
+        # Test POST /api/admin/report-resolve
+        # Create a test report
+        report_id = str(uuid.uuid4())
+        db.reports.insert_one({
+            "id": report_id,
+            "reporterId": user_id,
+            "profileId": profile_id,
+            "reason": "test",
+            "status": "open",
+            "createdAt": datetime.datetime.utcnow()
+        })
+        
+        r = requests.post(f"{BASE_URL}/api/admin/report-resolve", json={"id": report_id}, cookies=admin_cookies)
+        assert r.status_code == 200, f"Expected 200 for report-resolve, got {r.status_code}"
+        
+        # Verify report is resolved
+        report = db.reports.find_one({"id": report_id})
+        assert report.get("status") == "resolved", "Report not resolved"
+        print(f"  Report resolved successfully")
+        
+        print("✅ PASS - Admin endpoints working")
+        return True
     except Exception as e:
-        log_test("Post message without text", False, str(e))
+        print(f"❌ FAIL - Admin endpoints: {e}")
         return False
 
-def test_reports_no_auth():
-    """Test 24: POST /api/reports without cookie -> 401"""
+def test_banned_user_relogin():
+    """Test banned user blocked from re-login"""
+    print("\n🧪 Testing banned user re-login...")
     try:
-        report_data = {
-            "profileId": "fake-profile-id",
-            "reason": "Inappropriate behavior"
-        }
-        response = requests.post(f"{BASE_URL}/api/reports", json=report_data)
-        data = response.json()
-        
-        passed = response.status_code == 401
-        log_test("Report without auth", passed, f"Status: {response.status_code}")
-        return passed
-    except Exception as e:
-        log_test("Report without auth", False, str(e))
-        return False
-
-def test_reports_with_auth(token):
-    """Test 25: POST /api/reports with auth -> {ok: true}"""
-    try:
+        # Create user and ban them
+        user_id, token, profile_id = create_test_user_with_session("banned@trainr.app")
+        db.users.update_one({"id": user_id}, {"$set": {"banned": True}})
         cookies = {"spottr_session": token}
-        report_data = {
-            "profileId": "fake-profile-id",
-            "reason": "Inappropriate behavior"
-        }
-        response = requests.post(f"{BASE_URL}/api/reports", json=report_data, cookies=cookies)
-        data = response.json()
         
-        passed = (
-            response.status_code == 200 and
-            data.get("ok") == True
-        )
+        # GET /api/auth/me should return {user: null, banned: true}
+        r = requests.get(f"{BASE_URL}/api/auth/me", cookies=cookies)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}"
+        data = r.json()
+        assert data.get("user") is None, f"Expected user=null, got {data.get('user')}"
+        assert data.get("banned") == True, f"Expected banned=true, got {data.get('banned')}"
+        print(f"  Banned user correctly blocked from re-login")
         
-        # Verify report was inserted
-        if passed:
-            client = MongoClient(MONGO_URL)
-            db = client[DB_NAME]
-            report = db.reports.find_one({"profileId": "fake-profile-id", "reason": "Inappropriate behavior"})
-            if not report:
-                passed = False
-                log_test("Report with auth", False, "Report not inserted in database")
-            else:
-                log_test("Report with auth", True, "Report created successfully")
-        else:
-            log_test("Report with auth", False, f"Response: {data}")
-        
-        return passed
+        print("✅ PASS - Banned user re-login blocked")
+        return True
     except Exception as e:
-        log_test("Report with auth", False, str(e))
+        print(f"❌ FAIL - Banned user re-login: {e}")
         return False
-
-def test_blocks_with_auth(token):
-    """Test 26: POST /api/blocks with auth -> {ok: true}"""
-    try:
-        # Get a profile to block
-        response = requests.get(f"{BASE_URL}/api/profiles/discover")
-        profiles = response.json().get("profiles", [])
-        
-        if not profiles:
-            log_test("Block profile with auth", False, "No profiles available to block")
-            return False, None
-        
-        profile_id = profiles[0]["id"]
-        cookies = {"spottr_session": token}
-        response = requests.post(f"{BASE_URL}/api/blocks", json={"profileId": profile_id}, cookies=cookies)
-        data = response.json()
-        
-        passed = (
-            response.status_code == 200 and
-            data.get("ok") == True
-        )
-        log_test("Block profile with auth", passed, f"Blocked profile: {profile_id}")
-        return passed, profile_id
-    except Exception as e:
-        log_test("Block profile with auth", False, str(e))
-        return False, None
-
-def test_discover_excludes_blocked(token, blocked_id):
-    """Test: Discover should exclude blocked profiles"""
-    try:
-        cookies = {"spottr_session": token}
-        response = requests.get(f"{BASE_URL}/api/profiles/discover", cookies=cookies)
-        data = response.json()
-        profiles = data.get("profiles", [])
-        
-        profile_ids = [p["id"] for p in profiles]
-        excludes_blocked = blocked_id not in profile_ids
-        
-        passed = excludes_blocked
-        log_test("Discover excludes blocked profiles", passed, 
-                f"Blocked profile excluded: {excludes_blocked}")
-        return passed
-    except Exception as e:
-        log_test("Discover excludes blocked profiles", False, str(e))
-        return False
-
-def print_summary():
-    """Print test summary"""
-    print("\n" + "="*60)
-    print("TEST SUMMARY")
-    print("="*60)
-    
-    total = len(test_results)
-    passed = sum(1 for r in test_results if r["passed"])
-    failed = total - passed
-    
-    print(f"Total Tests: {total}")
-    print(f"Passed: {passed} ✅")
-    print(f"Failed: {failed} ❌")
-    print(f"Success Rate: {(passed/total*100):.1f}%")
-    
-    if failed > 0:
-        print("\nFailed Tests:")
-        for r in test_results:
-            if not r["passed"]:
-                print(f"  ❌ {r['test']}")
-                if r["details"]:
-                    print(f"     {r['details']}")
 
 def main():
     """Run all tests"""
-    print("="*60)
-    print("SPOTTR BACKEND API TEST SUITE")
-    print("="*60)
-    print(f"Base URL: {BASE_URL}")
-    print(f"MongoDB: {MONGO_URL}/{DB_NAME}")
-    print("="*60 + "\n")
+    print("=" * 80)
+    print("🚀 TRAINR WAVE 1 BACKEND TEST SUITE")
+    print("=" * 80)
     
-    # Setup test user
-    print("Setting up test user...")
-    user_id, token = setup_test_user()
-    if not user_id or not token:
-        print("❌ Failed to setup test user. Aborting tests.")
-        return
+    results = []
     
-    print("\nRunning tests...\n")
+    # Regression tests
+    print("\n" + "=" * 80)
+    print("📋 REGRESSION TESTS")
+    print("=" * 80)
+    results.append(("Health check", test_health_check()))
+    results.append(("Auth session errors", test_auth_session_errors()))
+    results.append(("Profile photo validation", test_profile_photo_validation()))
+    results.append(("Verify selfie", test_verify_selfie()))
     
-    # Run all tests
-    test_health_check()
-    test_auth_me_no_cookie()
-    test_auth_session_missing_sessionid()
-    test_auth_session_invalid_sessionid()
-    test_auth_logout_no_cookie()
-    test_profile_me_no_cookie()
-    test_profile_me_with_cookie_no_profile(token)
-    test_create_profile_no_cookie()
-    test_create_profile_too_few_photos(token)
-    test_create_profile_too_many_photos(token)
-    test_create_profile_valid(token)
-    test_discover_no_auth()
-    test_discover_filter_goal()
-    test_discover_filter_gender()
-    test_discover_filter_verified()
-    test_like_no_auth()
+    # Wave 1 tests
+    print("\n" + "=" * 80)
+    print("🌊 WAVE 1 NEW FEATURES")
+    print("=" * 80)
+    results.append(("Location capture", test_location_capture()))
+    results.append(("Discover matchReasons", test_discover_match_reasons()))
+    results.append(("Discover filters", test_discover_filters()))
+    results.append(("Notifications", test_notifications()))
+    results.append(("Verify request", test_verify_request()))
+    results.append(("Like mutual match notifications", test_like_mutual_match_notifications()))
+    results.append(("Messages rate limit & moderation", test_messages_rate_limit_moderation()))
+    results.append(("Messages auto-read & typing", test_messages_read_typing()))
+    results.append(("Matches unread & lastMessage", test_matches_unread_last_message()))
+    results.append(("Admin endpoints", test_admin_endpoints()))
+    results.append(("Banned user re-login", test_banned_user_relogin()))
     
-    # Like and skip profiles
-    like_result = test_like_with_auth(token)
-    liked_id = like_result[1] if isinstance(like_result, tuple) else None
+    # Cleanup
+    cleanup()
     
-    skip_result = test_skip_with_auth(token)
-    skipped_id = skip_result[1] if isinstance(skip_result, tuple) else None
+    # Summary
+    print("\n" + "=" * 80)
+    print("📊 TEST SUMMARY")
+    print("=" * 80)
+    passed = sum(1 for _, result in results if result)
+    total = len(results)
     
-    # Test exclusion
-    if liked_id and skipped_id:
-        test_discover_excludes_interacted(token, liked_id, skipped_id)
+    for name, result in results:
+        status = "✅ PASS" if result else "❌ FAIL"
+        print(f"{status} - {name}")
     
-    test_matches_no_auth()
-    test_matches_with_auth(token)
-    test_messages_get(token)
-    test_messages_post_normal(token)
-    test_messages_post_inappropriate(token)
-    test_messages_post_no_text(token)
-    test_reports_no_auth()
-    test_reports_with_auth(token)
+    print("\n" + "=" * 80)
+    print(f"TOTAL: {passed}/{total} tests passed ({passed*100//total}%)")
+    print("=" * 80)
     
-    # Block profile and test exclusion
-    block_result = test_blocks_with_auth(token)
-    blocked_id = block_result[1] if isinstance(block_result, tuple) else None
-    
-    if blocked_id:
-        test_discover_excludes_blocked(token, blocked_id)
-    
-    # Print summary
-    print_summary()
+    return passed == total
 
 if __name__ == "__main__":
-    main()
+    success = main()
+    exit(0 if success else 1)

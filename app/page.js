@@ -18,6 +18,7 @@ import {
   Dumbbell, MapPin, Clock, Target, ShieldCheck, MessageCircle, Heart, X, ChevronRight,
   Sparkles, Users, Lock, AlertTriangle, Instagram, Send, Filter, ArrowLeft, LogOut,
   BadgeCheck, Flame, Activity, ArrowRight, Star, CheckCircle2, Loader2, Camera, RefreshCw,
+  Bell, Navigation, Zap, Shield, Crown, ChevronLeft, Check,
 } from 'lucide-react'
 
 const HERO_IMG = 'https://images.unsplash.com/photo-1648235692910-947cb90ddd97?w=1600&auto=format&fit=crop'
@@ -25,7 +26,7 @@ const LOGO = 'https://customer-assets.emergentagent.com/job_workout-match-19/art
 const INSTAGRAM_URL = 'https://instagram.com/trainr.in'
 const SUPPORT_EMAIL = 'hello@trainr.in'
 
-const GOALS = ['Weight Loss', 'Muscle Gain', 'Bulking', 'Leaning', 'Powerlifting', 'Cardio', 'General Fitness']
+const GOALS = ['Fat Loss', 'Muscle Gain', 'Strength', 'Cardio', 'Powerlifting', 'CrossFit', 'General Fitness']
 const TIMINGS = ['Early Morning', 'Morning', 'Afternoon', 'Evening', 'Late Night']
 const LEVELS = ['Beginner', 'Intermediate', 'Advanced']
 const GENDERS = ['Male', 'Female', 'Non-binary']
@@ -50,9 +51,12 @@ function Navbar({ user, view, setView }) {
           <nav className="flex items-center gap-1 md:gap-2">
             <button onClick={() => setView('discover')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'discover' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Discover</button>
             <button onClick={() => setView('matches')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'matches' || view === 'chat' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Connections</button>
-            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" title="Follow @trainr.in" className="hidden md:flex w-9 h-9 rounded-lg items-center justify-center text-white/60 hover:text-[#00ff88] hover:bg-white/5 transition">
-              <Instagram className="w-4 h-4" />
-            </a>
+            <NotificationBell onNavigate={setView} />
+            {user.isAdmin && (
+              <button onClick={() => setView('admin')} title="Admin" className={`w-9 h-9 rounded-lg flex items-center justify-center transition ${view === 'admin' ? 'bg-[#00ff88]/15 text-[#00ff88]' : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'}`}>
+                <Crown className="w-4 h-4" />
+              </button>
+            )}
             <button onClick={() => setView('settings')} className="ml-1 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition overflow-hidden ring-1 ring-white/10 hover:ring-[#00ff88]/40">
               <Avatar className="w-9 h-9">
                 <AvatarImage src={user.picture} />
@@ -307,6 +311,9 @@ function Field({ label, children }) {
 }
 
 function ProfileEditor({ user, profile, onSaved }) {
+  const isEditMode = !!profile
+  const totalSteps = 7
+  const [step, setStep] = useState(0)
   const [form, setForm] = useState({
     name: profile?.name || user?.name || '',
     age: profile?.age || '',
@@ -343,105 +350,267 @@ function ProfileEditor({ user, profile, onSaved }) {
     e.target.value = ''
   }
 
-  const submit = async () => {
-    if (form.photos.length < 3) { toast.error('Please add at least 3 photos'); return }
-    if (!form.name || !form.age || !form.gender || !form.city || !form.gymName || !form.level || !form.goal || !form.timing) {
-      toast.error('Please fill all required fields'); return
+  const validateStep = () => {
+    switch (step) {
+      case 0: if (form.photos.length < 3) return 'Add at least 3 photos'; break
+      case 1: if (!form.name || !form.age || !form.gender) return 'Fill name, age and gender'; break
+      case 2: if (!form.city || !form.gymName) return 'Pick city and your gym'; break
+      case 3: if (!form.goal) return 'Pick your workout goal'; break
+      case 4: if (!form.timing) return 'Pick your workout timing'; break
+      case 5: if (!form.level) return 'Pick your experience level'; break
+      default: break
     }
+    return null
+  }
+
+  const next = () => {
+    const err = validateStep()
+    if (err) { toast.error(err); return }
+    if (step < totalSteps - 1) setStep(s => s + 1)
+    else submit()
+  }
+  const back = () => { if (step > 0) setStep(s => s - 1) }
+
+  const submit = async () => {
     setSaving(true)
     try {
       const res = await fetch('/api/profile', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
-      toast.success('Profile saved!')
+      toast.success(isEditMode ? 'Profile updated!' : 'Welcome to Trainr!')
       onSaved?.(data.profile)
     } catch (e) { toast.error(e.message) } finally { setSaving(false) }
   }
 
-  return (
-    <div className="pt-20 pb-24 max-w-3xl mx-auto px-4 md:px-6">
-      <div className="mb-8 fade-up">
-        <h1 className="text-3xl md:text-4xl font-black tracking-tight">{profile ? 'Edit Profile' : 'Build Your Profile'}</h1>
-        <p className="text-white/60 mt-2">Help us match you with the right partners. (Instagram is optional and gets you a verified badge.)</p>
-      </div>
+  // ================ EDIT MODE: keep flat form (single page) ================
+  if (isEditMode) {
+    return (
+      <div className="pt-20 pb-24 max-w-3xl mx-auto px-4 md:px-6">
+        <div className="mb-8 fade-up">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight">Edit Profile</h1>
+          <p className="text-white/60 mt-2">Update your details. Changes are visible to new partners immediately.</p>
+        </div>
+        <div className="space-y-6 fade-up" style={{ animationDelay: '0.1s' }}>
+          <PhotoEditorCard photos={form.photos} setPhotos={(p) => update('photos', p)} photoUrl={photoUrl} setPhotoUrl={setPhotoUrl} addPhoto={addPhoto} handleFile={handleFile} removePhoto={removePhoto} />
 
-      <div className="space-y-6 fade-up" style={{ animationDelay: '0.1s' }}>
-        <Card className="glass border-white/10 p-6">
-          <Label className="text-base font-semibold mb-1 block">Profile Photos <span className="text-[#00ff88]">(3–5 required)</span></Label>
-          <p className="text-sm text-white/50 mb-4">Upload from your device or paste an image URL. Real photos build trust faster.</p>
-          <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mb-4">
-            {form.photos.map((p, i) => (
-              <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden bg-white/5 border border-white/10 group">
-                <img src={p} alt="" className="w-full h-full object-cover" />
-                <button onClick={() => removePhoto(i)} className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 backdrop-blur flex items-center justify-center"><X className="w-3.5 h-3.5" /></button>
-                {i === 0 && <Badge className="absolute bottom-1.5 left-1.5 bg-[#00ff88] text-black text-[10px] py-0">MAIN</Badge>}
+          <Card className="glass border-white/10 p-6 space-y-4">
+            <h3 className="font-semibold text-lg">Basics</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Name"><Input value={form.name} onChange={e => update('name', e.target.value)} className="bg-white/5 border-white/10" /></Field>
+              <Field label="Age"><Input type="number" min={18} max={80} value={form.age} onChange={e => update('age', e.target.value)} className="bg-white/5 border-white/10" /></Field>
+              <Field label="Gender">
+                <Select value={form.gender} onValueChange={v => update('gender', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select>
+              </Field>
+              <Field label="City">
+                <Select value={form.city} onValueChange={v => update('city', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+              </Field>
+              <Field label="Height (cm)"><Input type="number" value={form.height} onChange={e => update('height', e.target.value)} className="bg-white/5 border-white/10" /></Field>
+              <Field label="Weight (kg)"><Input type="number" value={form.weight} onChange={e => update('weight', e.target.value)} className="bg-white/5 border-white/10" /></Field>
+            </div>
+          </Card>
+
+          <Card className="glass border-white/10 p-6 space-y-4">
+            <h3 className="font-semibold text-lg">Fitness</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Gym Name"><Input value={form.gymName} onChange={e => update('gymName', e.target.value)} className="bg-white/5 border-white/10" /></Field>
+              <Field label="Experience Level">
+                <Select value={form.level} onValueChange={v => update('level', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{LEVELS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent></Select>
+              </Field>
+              <Field label="Workout Goal">
+                <Select value={form.goal} onValueChange={v => update('goal', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{GOALS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select>
+              </Field>
+              <Field label="Workout Timing">
+                <Select value={form.timing} onValueChange={v => update('timing', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{TIMINGS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select>
+              </Field>
+            </div>
+            <Field label="Short Bio">
+              <Textarea value={form.bio} onChange={e => update('bio', e.target.value)} maxLength={200} className="bg-white/5 border-white/10 min-h-[90px]" />
+              <div className="text-xs text-white/40 mt-1 text-right">{form.bio.length}/200</div>
+            </Field>
+            <Field label="Instagram (optional)">
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3">
+                <Instagram className="w-4 h-4 text-white/40" />
+                <Input value={form.instagram} onChange={e => update('instagram', e.target.value.replace('@',''))} placeholder="username" className="bg-transparent border-0 px-0 focus-visible:ring-0" />
               </div>
-            ))}
-            {form.photos.length < 5 && (
-              <label className="aspect-[3/4] rounded-xl border-2 border-dashed border-white/15 flex items-center justify-center text-white/40 hover:border-[#00ff88]/50 hover:text-[#00ff88] transition cursor-pointer">
-                <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
-                <span className="text-3xl">+</span>
-              </label>
+            </Field>
+          </Card>
+
+          <Button onClick={submit} disabled={saving} size="lg" className="w-full bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full h-12">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // ================ ONBOARDING WIZARD ================
+  const stepHeader = [
+    { kicker: 'Step 1 of 7', title: 'Add your photos', sub: 'Real, recent photos build trust faster. Add 3 to 5.' },
+    { kicker: 'Step 2 of 7', title: 'A bit about you', sub: 'Just the basics — name, age, gender.' },
+    { kicker: 'Step 3 of 7', title: 'Where do you train?', sub: 'Pick your city and your home gym.' },
+    { kicker: 'Step 4 of 7', title: "What's your goal?", sub: 'We\u2019ll match you with partners chasing the same.' },
+    { kicker: 'Step 5 of 7', title: 'When do you train?', sub: 'Schedule matters. Pick your usual session window.' },
+    { kicker: 'Step 6 of 7', title: 'Experience level', sub: 'So we set realistic expectations between partners.' },
+    { kicker: 'Step 7 of 7', title: 'Tell partners your story', sub: 'Short, real, and what you\u2019re looking for.' },
+  ]
+  const cur = stepHeader[step]
+  const progressPct = ((step + 1) / totalSteps) * 100
+
+  return (
+    <div className="pt-20 pb-24 min-h-screen">
+      <div className="max-w-xl mx-auto px-4 md:px-6">
+        {/* Progress */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between text-xs text-white/50 mb-2">
+            <span className="uppercase tracking-wider font-semibold text-[#00ff88]">{cur.kicker}</span>
+            <span>{Math.round(progressPct)}% complete</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-[#00ff88] to-[#00cc6a] transition-all duration-500 ease-out" style={{ width: `${progressPct}%` }} />
+          </div>
+        </div>
+
+        <div key={step} className="fade-up">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight">{cur.title}</h1>
+          <p className="text-white/55 mt-2">{cur.sub}</p>
+
+          <div className="mt-8 space-y-4">
+            {step === 0 && (
+              <PhotoEditorCard photos={form.photos} setPhotos={(p) => update('photos', p)} photoUrl={photoUrl} setPhotoUrl={setPhotoUrl} addPhoto={addPhoto} handleFile={handleFile} removePhoto={removePhoto} />
+            )}
+            {step === 1 && (
+              <Card className="glass border-white/10 p-6 space-y-4">
+                <Field label="Name"><Input value={form.name} onChange={e => update('name', e.target.value)} className="bg-white/5 border-white/10 h-11" placeholder="Your name" /></Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Age"><Input type="number" min={18} max={80} value={form.age} onChange={e => update('age', e.target.value)} className="bg-white/5 border-white/10 h-11" placeholder="25" /></Field>
+                  <Field label="Gender">
+                    <Select value={form.gender} onValueChange={v => update('gender', v)}><SelectTrigger className="bg-white/5 border-white/10 h-11"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select>
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Height (cm) — optional"><Input type="number" value={form.height} onChange={e => update('height', e.target.value)} className="bg-white/5 border-white/10 h-11" /></Field>
+                  <Field label="Weight (kg) — optional"><Input type="number" value={form.weight} onChange={e => update('weight', e.target.value)} className="bg-white/5 border-white/10 h-11" /></Field>
+                </div>
+              </Card>
+            )}
+            {step === 2 && (
+              <Card className="glass border-white/10 p-6 space-y-4">
+                <Field label="City">
+                  <Select value={form.city} onValueChange={v => update('city', v)}><SelectTrigger className="bg-white/5 border-white/10 h-11"><SelectValue placeholder="Select your city" /></SelectTrigger>
+                    <SelectContent>{CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+                </Field>
+                <Field label="Gym name"><Input value={form.gymName} onChange={e => update('gymName', e.target.value)} placeholder="e.g. Cult Fit, Gold's Gym" className="bg-white/5 border-white/10 h-11" /></Field>
+              </Card>
+            )}
+            {step === 3 && (
+              <ChoiceGrid options={GOALS} value={form.goal} onChange={(v) => update('goal', v)} icon={Target} />
+            )}
+            {step === 4 && (
+              <ChoiceGrid options={TIMINGS} value={form.timing} onChange={(v) => update('timing', v)} icon={Clock} />
+            )}
+            {step === 5 && (
+              <ChoiceGrid options={LEVELS} value={form.level} onChange={(v) => update('level', v)} icon={Zap} large />
+            )}
+            {step === 6 && (
+              <Card className="glass border-white/10 p-6 space-y-4">
+                <Field label="Short bio">
+                  <Textarea
+                    value={form.bio} onChange={e => update('bio', e.target.value)} maxLength={200}
+                    placeholder="Morning workouts before office. Need a squat partner."
+                    className="bg-white/5 border-white/10 min-h-[110px]"
+                  />
+                  <div className="text-xs text-white/40 mt-1 text-right">{form.bio.length}/200</div>
+                </Field>
+                <Field label="Instagram (optional — gets you a verified badge)">
+                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 h-11">
+                    <Instagram className="w-4 h-4 text-white/40" />
+                    <Input value={form.instagram} onChange={e => update('instagram', e.target.value.replace('@',''))} placeholder="username" className="bg-transparent border-0 px-0 focus-visible:ring-0" />
+                  </div>
+                </Field>
+                <div className="rounded-xl bg-[#00ff88]/5 border border-[#00ff88]/20 p-4 text-sm text-white/75 leading-relaxed">
+                  By continuing you agree to Trainr\u2019s safety-first community guidelines: zero tolerance for harassment, sexual content or fake profiles.
+                </div>
+              </Card>
             )}
           </div>
-          <div className="flex gap-2">
-            <Input value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="Or paste image URL..." className="bg-white/5 border-white/10" />
-            <Button type="button" onClick={addPhoto} variant="outline" className="bg-white/5 border-white/10">Add</Button>
-          </div>
-        </Card>
+        </div>
 
-        <Card className="glass border-white/10 p-6 space-y-4">
-          <h3 className="font-semibold text-lg">Basics</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Name"><Input value={form.name} onChange={e => update('name', e.target.value)} className="bg-white/5 border-white/10" /></Field>
-            <Field label="Age"><Input type="number" min={18} max={80} value={form.age} onChange={e => update('age', e.target.value)} className="bg-white/5 border-white/10" /></Field>
-            <Field label="Gender">
-              <Select value={form.gender} onValueChange={v => update('gender', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select>
-            </Field>
-            <Field label="City">
-              <Select value={form.city} onValueChange={v => update('city', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
-            </Field>
-            <Field label="Height (cm)"><Input type="number" value={form.height} onChange={e => update('height', e.target.value)} className="bg-white/5 border-white/10" /></Field>
-            <Field label="Weight (kg)"><Input type="number" value={form.weight} onChange={e => update('weight', e.target.value)} className="bg-white/5 border-white/10" /></Field>
-          </div>
-        </Card>
-
-        <Card className="glass border-white/10 p-6 space-y-4">
-          <h3 className="font-semibold text-lg">Fitness</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Gym Name"><Input value={form.gymName} onChange={e => update('gymName', e.target.value)} placeholder="e.g. Cult Fit, Gold's Gym" className="bg-white/5 border-white/10" /></Field>
-            <Field label="Experience Level">
-              <Select value={form.level} onValueChange={v => update('level', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{LEVELS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent></Select>
-            </Field>
-            <Field label="Workout Goal">
-              <Select value={form.goal} onValueChange={v => update('goal', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{GOALS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select>
-            </Field>
-            <Field label="Workout Timing">
-              <Select value={form.timing} onValueChange={v => update('timing', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{TIMINGS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select>
-            </Field>
-          </div>
-          <Field label="Short Bio">
-            <Textarea value={form.bio} onChange={e => update('bio', e.target.value)} maxLength={200} placeholder="What kind of partner are you looking for?" className="bg-white/5 border-white/10 min-h-[90px]" />
-            <div className="text-xs text-white/40 mt-1 text-right">{form.bio.length}/200</div>
-          </Field>
-          <Field label="Instagram (optional)">
-            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3">
-              <Instagram className="w-4 h-4 text-white/40" />
-              <Input value={form.instagram} onChange={e => update('instagram', e.target.value.replace('@',''))} placeholder="username" className="bg-transparent border-0 px-0 focus-visible:ring-0" />
-            </div>
-          </Field>
-        </Card>
-
-        <Button onClick={submit} disabled={saving} size="lg" className="w-full bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full h-12 neon-glow">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-          {saving ? 'Saving...' : (profile ? 'Save Changes' : 'Create Profile & Discover Partners')}
-        </Button>
+        {/* Footer nav */}
+        <div className="mt-8 flex items-center gap-3">
+          {step > 0 && (
+            <Button onClick={back} variant="outline" className="bg-white/5 border-white/15 rounded-full h-12 px-5">
+              <ChevronLeft className="w-4 h-4 mr-1" /> Back
+            </Button>
+          )}
+          <Button onClick={next} disabled={saving} className="flex-1 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full h-12 active:scale-[0.99] transition">
+            {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating profile…</> : (step === totalSteps - 1 ? <>Finish & Discover Partners <ArrowRight className="w-4 h-4 ml-2" /></> : <>Continue <ArrowRight className="w-4 h-4 ml-2" /></>)}
+          </Button>
+        </div>
       </div>
+    </div>
+  )
+}
+
+function PhotoEditorCard({ photos, setPhotos, photoUrl, setPhotoUrl, addPhoto, handleFile, removePhoto }) {
+  return (
+    <Card className="glass border-white/10 p-5 md:p-6">
+      <div className="grid grid-cols-3 md:grid-cols-5 gap-2.5 md:gap-3 mb-4">
+        {photos.map((p, i) => (
+          <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden bg-white/5 border border-white/10 group">
+            <img src={p} alt="" className="w-full h-full object-cover" />
+            <button onClick={() => removePhoto(i)} className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/75 backdrop-blur flex items-center justify-center hover:bg-black/90"><X className="w-3.5 h-3.5" /></button>
+            {i === 0 && <Badge className="absolute bottom-1.5 left-1.5 bg-[#00ff88] text-black text-[10px] py-0 font-bold tracking-wide">MAIN</Badge>}
+          </div>
+        ))}
+        {photos.length < 5 && (
+          <label className="aspect-[3/4] rounded-xl border-2 border-dashed border-white/15 flex flex-col items-center justify-center text-white/40 hover:border-[#00ff88]/50 hover:text-[#00ff88] transition cursor-pointer">
+            <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+            <span className="text-3xl leading-none">+</span>
+            <span className="text-[10px] uppercase tracking-wider mt-1">Add photo</span>
+          </label>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Input value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="Or paste image URL…" className="bg-white/5 border-white/10" />
+        <Button type="button" onClick={addPhoto} variant="outline" className="bg-white/5 border-white/10">Add URL</Button>
+      </div>
+      <p className="text-xs text-white/40 mt-3">3–5 photos required. First photo is your main.</p>
+    </Card>
+  )
+}
+
+function ChoiceGrid({ options, value, onChange, icon: Icon, large }) {
+  return (
+    <div className={`grid gap-2.5 ${large ? 'grid-cols-1' : 'grid-cols-2'}`}>
+      {options.map(opt => {
+        const selected = value === opt
+        return (
+          <button
+            key={opt}
+            onClick={() => onChange(opt)}
+            className={`text-left p-4 rounded-2xl border transition-all duration-200 active:scale-[0.99] ${
+              selected
+                ? 'bg-[#00ff88]/10 border-[#00ff88]/50 text-white shadow-[0_0_0_1px_rgba(0,255,136,0.2)]'
+                : 'bg-white/[0.03] border-white/10 text-white/85 hover:bg-white/[0.06] hover:border-white/20'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selected ? 'bg-[#00ff88]/20 text-[#00ff88]' : 'bg-white/5 text-white/50'}`}>
+                {Icon && <Icon className="w-5 h-5" />}
+              </div>
+              <span className="font-semibold flex-1">{opt}</span>
+              {selected && <Check className="w-5 h-5 text-[#00ff88]" />}
+            </div>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -477,6 +646,100 @@ function SmartImg({ src, alt, className = '', sizes }) {
       )}
     </div>
   )
+}
+
+function NotificationBell({ onNavigate }) {
+  const [open, setOpen] = useState(false)
+  const [items, setItems] = useState([])
+  const [unread, setUnread] = useState(0)
+
+  const load = async () => {
+    try {
+      const res = await fetch('/api/notifications', { credentials: 'include' })
+      const data = await res.json()
+      if (data.notifications) { setItems(data.notifications); setUnread(data.unread || 0) }
+    } catch {}
+  }
+  useEffect(() => {
+    load()
+    const t = setInterval(load, 15000)
+    return () => clearInterval(t)
+  }, [])
+
+  const handleOpen = async (next) => {
+    setOpen(next)
+    if (next && unread > 0) {
+      await fetch('/api/notifications/read', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      setUnread(0)
+    }
+  }
+
+  const handleClick = (n) => {
+    setOpen(false)
+    if (n.type === 'new_match' || n.type === 'new_message') onNavigate?.('matches')
+    else if (n.type === 'connect_request') onNavigate?.('discover')
+    else if (n.type === 'verification_approved') onNavigate?.('settings')
+  }
+
+  const iconFor = (t) => {
+    if (t === 'new_match') return Heart
+    if (t === 'new_message') return MessageCircle
+    if (t === 'connect_request') return Sparkles
+    if (t === 'verification_approved') return BadgeCheck
+    return Bell
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={handleOpen}>
+      <SheetTrigger asChild>
+        <button className="relative w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition" title="Notifications">
+          <Bell className="w-4 h-4 text-white/70" />
+          {unread > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[#00ff88] text-black text-[10px] font-extrabold flex items-center justify-center ring-2 ring-[#0a0b0d]">
+              {unread > 9 ? '9+' : unread}
+            </span>
+          )}
+        </button>
+      </SheetTrigger>
+      <SheetContent className="bg-[#0a0b0d] border-white/10 overflow-y-auto w-full sm:max-w-sm">
+        <SheetHeader><SheetTitle className="flex items-center gap-2"><Bell className="w-4 h-4 text-[#00ff88]" /> Notifications</SheetTitle></SheetHeader>
+        <div className="mt-6 space-y-2">
+          {items.length === 0 && (
+            <div className="text-center py-12 text-white/40 text-sm">
+              <Bell className="w-8 h-8 mx-auto mb-2 text-white/20" />
+              You\u2019re all caught up.
+            </div>
+          )}
+          {items.map(n => {
+            const Ic = iconFor(n.type)
+            return (
+              <button key={n.id} onClick={() => handleClick(n)} className={`w-full text-left rounded-xl p-3 flex gap-3 transition ${n.read ? 'bg-white/[0.02] hover:bg-white/[0.05]' : 'bg-[#00ff88]/[0.06] border border-[#00ff88]/15 hover:bg-[#00ff88]/[0.08]'}`}>
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${n.read ? 'bg-white/5 text-white/50' : 'bg-[#00ff88]/15 text-[#00ff88]'}`}>
+                  <Ic className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">{n.title}</div>
+                  {n.body && <div className="text-xs text-white/55 truncate mt-0.5">{n.body}</div>}
+                  <div className="text-[10px] text-white/35 mt-1">{timeAgo(n.createdAt)}</div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  const s = Math.floor((Date.now() - d.getTime()) / 1000)
+  if (s < 60) return 'just now'
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  if (s < 86400 * 7) return `${Math.floor(s / 86400)}d ago`
+  return d.toLocaleDateString()
 }
 
 function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
@@ -523,6 +786,12 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
               <span>{profile.city}</span>
               <span className="text-white/30">·</span>
               <span className="text-white/85 font-medium">{profile.gymName}</span>
+              {profile.distanceKm != null && (
+                <>
+                  <span className="text-white/30">·</span>
+                  <span className="text-[#00ff88] font-medium flex items-center gap-1"><Navigation className="w-3 h-3" />{profile.distanceKm} km</span>
+                </>
+              )}
             </div>
             <div className="flex flex-wrap gap-1.5 mt-3">
               <Badge className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30 hover:bg-[#00ff88]/15 font-semibold">{profile.goal}</Badge>
@@ -533,6 +802,16 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
         </div>
 
         <div className="p-5 md:p-6">
+          {profile.matchReasons && profile.matchReasons.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mr-1">Why this match</span>
+              {profile.matchReasons.map(r => (
+                <span key={r.key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#00ff88]/10 border border-[#00ff88]/20 text-[#00ff88] text-[11px] font-semibold">
+                  <Sparkles className="w-2.5 h-2.5" /> {r.label}
+                </span>
+              ))}
+            </div>
+          )}
           {profile.bio && <p className="text-[15px] text-white/85 leading-[1.55]">{profile.bio}</p>}
           {profile.instagram && (
             <a href={`https://instagram.com/${profile.instagram}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-white/55 mt-3 hover:text-[#00ff88] transition">
@@ -593,12 +872,25 @@ function FiltersSheet({ filters, setFilters, onApply }) {
             <Select value={local.level || '__any__'} onValueChange={v => set('level', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Any" /></SelectTrigger>
               <SelectContent><SelectItem value="__any__">Any</SelectItem>{LEVELS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent></Select>
           </Field>
-          <div className="flex items-center justify-between pt-2">
+          <Field label={`Maximum distance${local.maxDistance ? ` (${local.maxDistance} km)` : ' — any'}`}>
+            <input
+              type="range" min={0} max={50} step={5}
+              value={local.maxDistance || 0}
+              onChange={e => set('maxDistance', parseInt(e.target.value, 10))}
+              className="w-full accent-[#00ff88]"
+            />
+            <div className="flex justify-between text-[10px] text-white/40 mt-1"><span>0 km</span><span>5</span><span>15</span><span>30</span><span>50+ (any)</span></div>
+          </Field>
+          <div className="flex items-center justify-between pt-1">
+            <Label htmlFor="ra" className="text-sm">Recently active only</Label>
+            <Switch id="ra" checked={local.recentlyActive} onCheckedChange={v => set('recentlyActive', v)} />
+          </div>
+          <div className="flex items-center justify-between">
             <Label htmlFor="vo" className="text-sm">Verified users only</Label>
             <Switch id="vo" checked={local.verifiedOnly} onCheckedChange={v => set('verifiedOnly', v)} />
           </div>
           <div className="flex gap-2 pt-4">
-            <Button onClick={() => { const blank = { city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false }; setLocal(blank); setFilters(blank); onApply?.(blank) }} variant="outline" className="flex-1 bg-white/5 border-white/10">Reset</Button>
+            <Button onClick={() => { const blank = { city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, recentlyActive: false, maxDistance: 0 }; setLocal(blank); setFilters(blank); onApply?.(blank) }} variant="outline" className="flex-1 bg-white/5 border-white/10">Reset</Button>
             <Button onClick={() => { setFilters(local); onApply?.(local) }} className="flex-1 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold">Apply</Button>
           </div>
         </div>
@@ -608,10 +900,41 @@ function FiltersSheet({ filters, setFilters, onApply }) {
 }
 
 function Discover() {
-  const [filters, setFilters] = useState({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false })
+  const [filters, setFilters] = useState({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, recentlyActive: false, maxDistance: 0 })
   const [profiles, setProfiles] = useState(null)
   const [reportProfile, setReportProfile] = useState(null)
   const [reportReason, setReportReason] = useState('')
+  const [showLocPrompt, setShowLocPrompt] = useState(false)
+
+  // Ask for location once per device — non-intrusive banner.
+  useEffect(() => {
+    try {
+      const decided = localStorage.getItem('trainr_loc_decided')
+      if (!decided) setShowLocPrompt(true)
+    } catch {}
+  }, [])
+
+  const enableLocation = () => {
+    if (!navigator.geolocation) { setShowLocPrompt(false); localStorage.setItem('trainr_loc_decided', '1'); return }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        await fetch('/api/profile/location', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        })
+        toast.success('Location set — showing nearby partners.')
+        try { localStorage.setItem('trainr_loc_decided', '1') } catch {}
+        setShowLocPrompt(false)
+        load()
+      } catch {}
+    }, () => {
+      toast('Using city-based matching.')
+      try { localStorage.setItem('trainr_loc_decided', '1') } catch {}
+      setShowLocPrompt(false)
+    }, { timeout: 8000 })
+  }
+  const dismissLoc = () => { try { localStorage.setItem('trainr_loc_decided', '1') } catch {}; setShowLocPrompt(false) }
 
   const load = async (f = filters) => {
     setProfiles(null)
@@ -663,6 +986,25 @@ function Discover() {
         </div>
       </div>
 
+      {showLocPrompt && (
+        <div className="max-w-md mx-auto px-4 pt-4">
+          <div className="glass border-white/10 rounded-2xl p-4 flex items-start gap-3 fade-up">
+            <div className="w-9 h-9 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20 flex items-center justify-center flex-shrink-0">
+              <Navigation className="w-4 h-4 text-[#00ff88]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold">See partners near you</div>
+              <div className="text-xs text-white/55 mt-0.5">Allow location for distance-based discovery. We never share your exact location.</div>
+              <div className="flex gap-2 mt-3">
+                <Button onClick={enableLocation} size="sm" className="bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold h-8 text-xs">Allow location</Button>
+                <Button onClick={dismissLoc} size="sm" variant="outline" className="bg-white/5 border-white/10 h-8 text-xs">Use city only</Button>
+              </div>
+            </div>
+            <button onClick={dismissLoc} className="text-white/40 hover:text-white/70" aria-label="Dismiss"><X className="w-4 h-4" /></button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-md mx-auto px-4 snap-y snap-mandatory">
         {profiles === null && (
           <div className="space-y-4 pt-6">
@@ -687,7 +1029,7 @@ function Discover() {
             </div>
             <h3 className="text-xl font-bold">No more partners right now</h3>
             <p className="text-white/60 mt-1 text-sm">Try changing your filters or check back soon.</p>
-            <Button onClick={() => load({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false })} variant="outline" className="mt-5 bg-white/5 border-white/10">Reset filters</Button>
+            <Button onClick={() => load({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, recentlyActive: false, maxDistance: 0 })} variant="outline" className="mt-5 bg-white/5 border-white/10">Reset filters</Button>
           </div>
         )}
         {profiles?.map(p => (
@@ -739,8 +1081,20 @@ function Matches({ onOpenChat }) {
               <div className="flex items-center gap-2">
                 <span className="font-semibold truncate">{m.otherProfile?.name}<span className="text-white/60 font-medium">, {m.otherProfile?.age}</span></span>
                 <VerificationBadge verified={m.otherProfile?.verified} />
+                {m.unreadCount > 0 && (
+                  <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-[#00ff88] text-black text-[10px] font-extrabold flex items-center justify-center">
+                    {m.unreadCount > 9 ? '9+' : m.unreadCount}
+                  </span>
+                )}
               </div>
-              <div className="text-xs text-white/55 truncate mt-0.5">{m.otherProfile?.gymName} · {m.otherProfile?.goal} · {m.otherProfile?.timing}</div>
+              {m.lastMessage ? (
+                <div className={`text-xs truncate mt-0.5 ${m.unreadCount > 0 ? 'text-white/85 font-medium' : 'text-white/50'}`}>
+                  {m.lastMessage.fromMe && <span className="text-white/40">You: </span>}
+                  {m.lastMessage.text}
+                </div>
+              ) : (
+                <div className="text-xs text-white/45 truncate mt-0.5">{m.otherProfile?.gymName} · {m.otherProfile?.goal}</div>
+              )}
             </div>
             <ChevronRight className="w-5 h-5 text-white/40" />
           </button>
@@ -752,22 +1106,31 @@ function Matches({ onOpenChat }) {
 
 function Chat({ match, currentUserId, onBack }) {
   const [messages, setMessages] = useState([])
+  const [otherTyping, setOtherTyping] = useState(false)
   const [text, setText] = useState('')
   const scrollerRef = useRef(null)
+  const typingTimerRef = useRef(null)
 
   const load = async () => {
     try {
       const res = await fetch(`/api/messages?matchId=${match.id}`, { credentials: 'include' })
       const data = await res.json()
       setMessages(data.messages || [])
+      setOtherTyping(!!data.otherTyping)
     } catch {}
   }
   useEffect(() => {
     load()
-    const t = setInterval(load, 3000)
+    const t = setInterval(load, 2500)
     return () => clearInterval(t)
   }, [match.id]) // eslint-disable-line
-  useEffect(() => { scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: 'smooth' }) }, [messages])
+  useEffect(() => { scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: 'smooth' }) }, [messages, otherTyping])
+
+  const pingTyping = () => {
+    if (typingTimerRef.current) return
+    fetch('/api/messages/typing', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ matchId: match.id }) }).catch(() => {})
+    typingTimerRef.current = setTimeout(() => { typingTimerRef.current = null }, 3000)
+  }
 
   const send = async () => {
     if (!text.trim()) return
@@ -776,10 +1139,20 @@ function Chat({ match, currentUserId, onBack }) {
     try {
       const res = await fetch('/api/messages', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ matchId: match.id, text: t }) })
       const data = await res.json()
+      if (!res.ok) {
+        if (res.status === 429) toast.error(data.error || 'Slow down')
+        else toast.error(data.error || 'Failed to send')
+        return
+      }
       if (data.message?.flagged) toast.warning('Your message was flagged. Repeated violations lead to suspension.')
       load()
     } catch { toast.error('Failed to send') }
   }
+
+  // last message I sent, to show seen/sent status
+  const myLastMsg = [...messages].reverse().find(m => m.fromUserId === currentUserId)
+  const otherUserId = match.userA === currentUserId ? match.userB : match.userA
+  const myLastSeen = myLastMsg && Array.isArray(myLastMsg.readBy) && myLastMsg.readBy.includes(otherUserId)
 
   return (
     <div className="pt-16 h-screen flex flex-col">
@@ -787,9 +1160,11 @@ function Chat({ match, currentUserId, onBack }) {
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <Button onClick={onBack} variant="ghost" size="icon" className="rounded-full"><ArrowLeft className="w-5 h-5" /></Button>
           <Avatar className="w-9 h-9"><AvatarImage src={match.otherProfile?.photos?.[0]} /><AvatarFallback>{match.otherProfile?.name?.slice(0,1)}</AvatarFallback></Avatar>
-          <div>
-            <div className="font-semibold text-sm flex items-center gap-1.5">{match.otherProfile?.name} <VerificationBadge verified={match.otherProfile?.verified} /></div>
-            <div className="text-xs text-white/50">{match.otherProfile?.online ? 'Online now' : 'Offline'}</div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-sm flex items-center gap-1.5 truncate">{match.otherProfile?.name} <VerificationBadge verified={match.otherProfile?.verified} /></div>
+            <div className="text-xs text-white/50">
+              {otherTyping ? <span className="text-[#00ff88]">typing…</span> : (match.otherProfile?.online ? 'Online now' : 'Offline')}
+            </div>
           </div>
         </div>
       </div>
@@ -803,18 +1178,41 @@ function Chat({ match, currentUserId, onBack }) {
             return (
               <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${mine ? 'bg-[#00ff88] text-black' : 'glass border-white/10'} ${m.flagged ? 'opacity-70 ring-1 ring-red-500/40' : ''}`}>
-                  <div className="text-sm leading-relaxed">{m.text}</div>
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.text}</div>
                   <div className={`text-[10px] mt-1 ${mine ? 'text-black/50' : 'text-white/40'}`}>{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                 </div>
               </div>
             )
           })}
+          {otherTyping && (
+            <div className="flex justify-start">
+              <div className="glass border-white/10 rounded-2xl px-4 py-2.5">
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '120ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/60 animate-bounce" style={{ animationDelay: '240ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
+          {myLastMsg && (
+            <div className="flex justify-end">
+              <div className="text-[10px] text-white/40 pr-1">{myLastSeen ? 'Seen' : 'Sent'}</div>
+            </div>
+          )}
         </div>
       </div>
       <div className="border-t border-white/10 glass-strong">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-2">
-          <Input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} placeholder="Type a message..." className="bg-white/5 border-white/10" />
-          <Button onClick={send} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black rounded-full" size="icon"><Send className="w-4 h-4" /></Button>
+          <Input
+            value={text}
+            onChange={e => { setText(e.target.value); pingTyping() }}
+            onKeyDown={e => e.key === 'Enter' && send()}
+            maxLength={1000}
+            placeholder="Type a message..."
+            className="bg-white/5 border-white/10"
+          />
+          <Button onClick={send} disabled={!text.trim()} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black rounded-full disabled:opacity-50" size="icon"><Send className="w-4 h-4" /></Button>
         </div>
       </div>
     </div>
@@ -823,6 +1221,46 @@ function Chat({ match, currentUserId, onBack }) {
 
 function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated }) {
   const [showSelfie, setShowSelfie] = useState(false)
+  const [requesting, setRequesting] = useState(null)
+
+  const requestVerify = async (type) => {
+    setRequesting(type)
+    try {
+      const res = await fetch('/api/profile/verify-request', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed')
+      toast.success(`${type === 'gym' ? 'Gym' : 'Instagram'} verification approved`)
+      onProfileUpdated?.(data.profile)
+    } catch (e) { toast.error(e.message) } finally { setRequesting(null) }
+  }
+
+  const VerifyRow = ({ type, label, icon: Ic }) => {
+    const status = profile?.verificationRequests?.[type] || 'none'
+    const verified = profile?.verifications?.[type]
+    return (
+      <div className="flex items-center justify-between py-1">
+        <div className="flex items-center gap-2"><Ic className="w-4 h-4 text-white/55" /> <span className="text-sm">{label}</span></div>
+        {verified ? (
+          <Badge className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30">Verified</Badge>
+        ) : status === 'pending' ? (
+          <Badge variant="outline" className="bg-amber-500/10 text-amber-300 border-amber-500/30">In review</Badge>
+        ) : type === 'selfie' ? (
+          <Button size="sm" variant="outline" onClick={() => setShowSelfie(true)} className="bg-white/5 border-white/10 h-8 text-xs">
+            <Camera className="w-3 h-3 mr-1.5" /> Verify
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" disabled={requesting === type} onClick={() => requestVerify(type)} className="bg-white/5 border-white/10 h-8 text-xs">
+            {requesting === type ? <Loader2 className="w-3 h-3 animate-spin" /> : <>Request</>}
+          </Button>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="pt-20 pb-12 max-w-2xl mx-auto px-4 md:px-6">
       <h1 className="text-3xl md:text-4xl font-black tracking-tight">Settings</h1>
@@ -835,30 +1273,137 @@ function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated
           </div>
           <Button onClick={onEditProfile} variant="outline" className="bg-white/5 border-white/10">Edit</Button>
         </Card>
+
         <Card className="glass border-white/10 p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">Verification</h3>
             {profile?.verified && <Badge className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30">Verified ✓</Badge>}
           </div>
-          <div className="space-y-2 text-sm mb-4">
-            <Row icon={CheckCircle2} label="Selfie verification" status={profile?.verifications?.selfie} />
-            <Row icon={Instagram} label="Instagram linked" status={profile?.verifications?.instagram} />
-            <Row icon={Dumbbell} label="Verified gym member" status={profile?.verifications?.gym} />
+          <div className="space-y-2">
+            <VerifyRow type="selfie" label="Selfie verification" icon={Camera} />
+            <VerifyRow type="instagram" label="Instagram linked" icon={Instagram} />
+            <VerifyRow type="gym" label="Verified gym member" icon={Dumbbell} />
           </div>
-          {!profile?.verifications?.selfie && (
-            <Button onClick={() => setShowSelfie(true)} className="w-full bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold">
-              <Camera className="w-4 h-4 mr-2" /> Verify with Selfie
-            </Button>
-          )}
-          {profile?.verifications?.selfie && (
-            <p className="text-xs text-[#00ff88]/80">{`Selfie verified. You've earned the trusted badge.`}</p>
-          )}
+          <p className="text-xs text-white/40 mt-3">Verified profiles get a blue badge and higher visibility.</p>
         </Card>
+
         <button onClick={onLogout} className="w-full glass rounded-2xl p-5 flex items-center gap-3 hover:bg-red-500/10 transition text-red-400">
           <LogOut className="w-5 h-5" /> <span className="font-semibold">Log out</span>
         </button>
       </div>
       <SelfieVerifyDialog open={showSelfie} onOpenChange={setShowSelfie} onVerified={(p) => onProfileUpdated?.(p)} />
+    </div>
+  )
+}
+
+function ForbiddenView({ onBack }) {
+  return (
+    <div className="pt-24 max-w-lg mx-auto px-4 text-center">
+      <Lock className="w-10 h-10 mx-auto text-white/40" />
+      <h2 className="text-2xl font-bold mt-4">Restricted area</h2>
+      <p className="text-sm text-white/55 mt-1">This page is for Trainr admins only.</p>
+      <Button onClick={onBack} className="mt-6 bg-[#00ff88] hover:bg-[#00cc6a] text-black rounded-full">Back to Discover</Button>
+    </div>
+  )
+}
+
+function AdminView() {  const [stats, setStats] = useState(null)
+  const [users, setUsers] = useState([])
+  const [reports, setReports] = useState([])
+
+  const refresh = async () => {
+    try {
+      const [s, u, r] = await Promise.all([
+        fetch('/api/admin/stats', { credentials: 'include' }).then(r => r.json()),
+        fetch('/api/admin/users', { credentials: 'include' }).then(r => r.json()),
+        fetch('/api/admin/reports', { credentials: 'include' }).then(r => r.json()),
+      ])
+      setStats(s.stats || null)
+      setUsers(u.users || [])
+      setReports(r.reports || [])
+    } catch (e) { toast.error('Failed to load admin data') }
+  }
+  useEffect(() => { refresh() }, [])
+
+  const ban = async (uid) => {
+    await fetch('/api/admin/ban', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: uid }) })
+    toast.success('User banned')
+    refresh()
+  }
+  const unban = async (uid) => {
+    await fetch('/api/admin/unban', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: uid }) })
+    toast.success('User unbanned')
+    refresh()
+  }
+  const resolve = async (id) => {
+    await fetch('/api/admin/report-resolve', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    toast.success('Report resolved')
+    refresh()
+  }
+
+  const StatCard = ({ label, value, accent }) => (
+    <Card className="glass border-white/10 p-4">
+      <div className="text-[11px] uppercase tracking-wider text-white/45 font-semibold">{label}</div>
+      <div className={`text-2xl md:text-3xl font-black mt-1 ${accent ? 'text-[#00ff88]' : ''}`}>{value ?? '—'}</div>
+    </Card>
+  )
+
+  return (
+    <div className="pt-20 pb-12 max-w-6xl mx-auto px-4 md:px-6">
+      <div className="flex items-center gap-3 mb-2">
+        <Crown className="w-6 h-6 text-[#00ff88]" />
+        <h1 className="text-3xl md:text-4xl font-black tracking-tight">Admin Console</h1>
+      </div>
+      <p className="text-white/55 text-sm">Trainr internal · access restricted to allowed admin emails.</p>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+        <StatCard label="Total users" value={stats?.users} />
+        <StatCard label="Active 24h" value={stats?.activeNow} accent />
+        <StatCard label="Real profiles" value={stats?.profiles} />
+        <StatCard label="Verified" value={stats?.verified} />
+        <StatCard label="Matches" value={stats?.matches} />
+        <StatCard label="Messages" value={stats?.messages} />
+        <StatCard label="Open reports" value={stats?.openReports} />
+        <StatCard label="Banned" value={stats?.banned} />
+      </div>
+
+      <h2 className="text-xl font-bold mt-12 mb-3">Reports</h2>
+      <Card className="glass border-white/10 divide-y divide-white/5">
+        {reports.length === 0 && <div className="p-5 text-sm text-white/45">No reports.</div>}
+        {reports.map(r => (
+          <div key={r.id} className="p-4 flex items-start gap-3 text-sm">
+            <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5" />
+            <div className="flex-1">
+              <div className="text-white/85 font-medium">Profile: {r.profileId?.slice(0,8)}…</div>
+              <div className="text-white/55 text-xs mt-0.5">{r.reason}</div>
+              <div className="text-white/35 text-[10px] mt-0.5">{new Date(r.createdAt).toLocaleString()}</div>
+            </div>
+            <Badge variant="outline" className={r.status === 'open' ? 'bg-amber-500/10 text-amber-300 border-amber-500/30' : 'bg-white/5 text-white/50 border-white/10'}>{r.status}</Badge>
+            {r.status === 'open' && <Button size="sm" onClick={() => resolve(r.id)} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black h-8 text-xs">Resolve</Button>}
+          </div>
+        ))}
+      </Card>
+
+      <h2 className="text-xl font-bold mt-10 mb-3">Users</h2>
+      <Card className="glass border-white/10 divide-y divide-white/5 overflow-hidden">
+        {users.map(u => (
+          <div key={u.id} className="p-4 flex items-center gap-3 text-sm">
+            <Avatar className="w-9 h-9"><AvatarImage src={u.picture} /><AvatarFallback>{u.name?.slice(0,1)}</AvatarFallback></Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium truncate">{u.name}</div>
+              <div className="text-xs text-white/50 truncate">{u.email}</div>
+            </div>
+            {u.banned ? (
+              <>
+                <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/30">Banned</Badge>
+                <Button size="sm" variant="outline" onClick={() => unban(u.id)} className="bg-white/5 border-white/10 h-8 text-xs">Unban</Button>
+              </>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => ban(u.id)} className="bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 h-8 text-xs">Ban</Button>
+            )}
+          </div>
+        ))}
+      </Card>
     </div>
   )
 }
@@ -1264,6 +1809,7 @@ function App() {
       {user && view === 'matches' && <Matches onOpenChat={(m) => { setActiveChat(m); setView('chat') }} />}
       {user && view === 'chat' && activeChat && <Chat match={activeChat} currentUserId={user.id} onBack={() => { setActiveChat(null); setView('matches') }} />}
       {user && view === 'settings' && <SettingsView user={user} profile={profile} onEditProfile={() => setView('profile-edit')} onLogout={handleLogout} onProfileUpdated={(p) => setProfile(p)} />}
+      {user && view === 'admin' && (user.isAdmin ? <AdminView /> : <ForbiddenView onBack={() => setView('discover')} />)}
     </div>
   )
 }
