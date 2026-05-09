@@ -40,20 +40,20 @@ function Navbar({ user, view, setView }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-strong">
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-        <button onClick={() => setView(user ? 'discover' : 'landing')} className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl overflow-hidden bg-black ring-1 ring-[#00ff88]/30 shadow-lg shadow-[#00ff88]/20 group-hover:scale-105 group-hover:shadow-[#00ff88]/40 transition">
-            <img src={LOGO} alt="Trainr" className="w-full h-full object-cover" />
+        <button onClick={() => setView(user ? 'discover' : 'landing')} className="flex items-center gap-2 group">
+          <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl overflow-hidden bg-black border border-[#00ff88]/25 group-hover:border-[#00ff88]/50 transition">
+            <img src={LOGO} alt="Trainr" className="w-full h-full object-cover" loading="eager" decoding="async" />
           </div>
-          <span className="text-xl font-extrabold tracking-tight">Trainr</span>
+          <span className="text-lg md:text-xl font-extrabold tracking-tight">Trainr</span>
         </button>
         {user ? (
           <nav className="flex items-center gap-1 md:gap-2">
             <button onClick={() => setView('discover')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'discover' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Discover</button>
             <button onClick={() => setView('matches')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'matches' || view === 'chat' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Connections</button>
-            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" title="Follow Trainr on Instagram" className="hidden md:flex w-9 h-9 rounded-lg items-center justify-center text-white/60 hover:text-[#00ff88] hover:bg-white/5 transition">
+            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" title="Follow @trainr.in" className="hidden md:flex w-9 h-9 rounded-lg items-center justify-center text-white/60 hover:text-[#00ff88] hover:bg-white/5 transition">
               <Instagram className="w-4 h-4" />
             </a>
-            <button onClick={() => setView('settings')} className="ml-1 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition overflow-hidden">
+            <button onClick={() => setView('settings')} className="ml-1 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition overflow-hidden ring-1 ring-white/10 hover:ring-[#00ff88]/40">
               <Avatar className="w-9 h-9">
                 <AvatarImage src={user.picture} />
                 <AvatarFallback className="bg-[#00ff88]/20 text-[#00ff88] text-xs font-semibold">{(user.name || 'U').slice(0,1)}</AvatarFallback>
@@ -62,12 +62,12 @@ function Navbar({ user, view, setView }) {
           </nav>
         ) : (
           <div className="flex items-center gap-2 md:gap-3">
-            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" title="Follow Trainr on Instagram" className="hidden sm:flex w-9 h-9 rounded-lg items-center justify-center text-white/60 hover:text-[#00ff88] hover:bg-white/5 transition">
+            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" title="Follow @trainr.in" className="hidden sm:flex w-9 h-9 rounded-lg items-center justify-center text-white/60 hover:text-[#00ff88] hover:bg-white/5 transition">
               <Instagram className="w-4 h-4" />
             </a>
             <button onClick={() => setView('about')} className="hidden md:inline-flex px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition">About</button>
             <button onClick={() => setView('contact')} className="hidden md:inline-flex px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition">Contact</button>
-            <Button onClick={loginWithGoogle} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full px-5">Get Started</Button>
+            <Button onClick={loginWithGoogle} className="bg-[#00ff88] hover:bg-[#00cc6a] active:scale-[0.98] text-black font-semibold rounded-full px-4 md:px-5 h-9 md:h-10 transition">Get Started</Button>
           </div>
         )}
       </div>
@@ -91,7 +91,7 @@ function Landing({ onNav }) {
                 Find Your Perfect <span className="text-gradient">Workout Partner.</span>
               </h1>
               <p className="mt-6 text-lg md:text-xl text-white/70 max-w-lg leading-relaxed">
-                Build your fitness network. Connect with verified training partners nearby — matched by gym, goals, and schedule. Built for accountability, not dating.
+                The accountability network for serious lifters. Find verified workout partners at your gym, on your schedule. Show up together — every single week.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <Button onClick={loginWithGoogle} size="lg" className="bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full h-12 px-7 text-base neon-glow">
@@ -136,23 +136,23 @@ function Landing({ onNav }) {
       <section id="features" className="py-20 md:py-28 relative">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <Badge className="mb-4 bg-white/5 text-white/80 border-white/10">Features</Badge>
-            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight">Built for serious lifters,<br /><span className="text-gradient">community-driven.</span></h2>
+            <Badge className="mb-4 bg-white/5 text-white/70 border-white/10">What you get</Badge>
+            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight">A real network behind <br/><span className="text-gradient">every workout.</span></h2>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { icon: Sparkles, title: 'Smart Matching', desc: 'Connect by goal, gym, schedule and experience — not selfies.' },
-              { icon: MapPin, title: 'Nearby Gym Partners', desc: 'See lifters at your gym, your timing, your level.' },
-              { icon: Target, title: 'Workout Accountability', desc: 'Show up because someone\u2019s waiting at the rack.' },
-              { icon: MessageCircle, title: 'In-App Chat', desc: 'Coordinate sessions, share PRs, build the rep.' },
-              { icon: BadgeCheck, title: 'Verified Profiles', desc: 'Selfie + Instagram + gym member checks.' },
-              { icon: ShieldCheck, title: 'Women Safety Focus', desc: 'Strict moderation, anti-creep detection, easy reporting.' },
-              { icon: Clock, title: 'Schedule Matching', desc: 'Find partners who train when you do.' },
-              { icon: Users, title: 'Community First', desc: 'A network to grow stronger, together.' },
-              { icon: Activity, title: 'Track Together', desc: 'Coming soon: session logs and streaks.' },
+              { icon: Sparkles, title: 'Smart Matching', desc: 'Matched by gym, schedule, goal and experience — so you actually train together.' },
+              { icon: MapPin, title: 'Nearby Gym Partners', desc: 'See lifters at your gym, training when you train.' },
+              { icon: Target, title: 'Workout Accountability', desc: 'Show up because someone is waiting at the rack.' },
+              { icon: MessageCircle, title: 'In-App Chat', desc: 'Coordinate sessions, share PRs, send a quick "you in for 6am?".' },
+              { icon: BadgeCheck, title: 'Verified Profiles', desc: 'Selfie, Instagram and gym checks — trust before the first message.' },
+              { icon: ShieldCheck, title: 'Women Safety Focus', desc: '24/7 moderation, anti-creep filters, one-tap block and report.' },
+              { icon: Clock, title: 'Schedule Matching', desc: 'Find partners who train at your timing — morning, evening or late night.' },
+              { icon: Users, title: 'Community First', desc: 'No swiping, no dating. Just lifters helping lifters.' },
+              { icon: Activity, title: 'Track Together', desc: 'Coming soon: streaks, check-ins and shared session logs.' },
             ].map((f, i) => (
-              <div key={i} className="group glass rounded-2xl p-6 hover:bg-white/[0.06] transition fade-up" style={{ animationDelay: `${i * 0.04}s` }}>
-                <div className="w-11 h-11 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/20 flex items-center justify-center mb-4 group-hover:bg-[#00ff88]/20 transition">
+              <div key={i} className="group glass rounded-2xl p-6 hover:bg-white/[0.06] hover:border-white/15 transition-colors fade-up" style={{ animationDelay: `${i * 0.04}s` }}>
+                <div className="w-11 h-11 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/20 flex items-center justify-center mb-4 group-hover:bg-[#00ff88]/15 transition">
                   <f.icon className="w-5 h-5 text-[#00ff88]" />
                 </div>
                 <h3 className="font-bold text-lg">{f.title}</h3>
@@ -193,8 +193,8 @@ function Landing({ onNav }) {
             <div className="relative grid md:grid-cols-2 gap-10 items-center">
               <div>
                 <Badge className="mb-4 bg-pink-500/10 text-pink-300 border-pink-500/30">Safety first</Badge>
-                <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">Women's safety is non-negotiable.</h2>
-                <p className="mt-4 text-white/70 max-w-md">Trainr is built with strict moderation, anti-harassment systems, and a zero-tolerance policy for inappropriate behavior.</p>
+                <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">A safer place to train.</h2>
+                <p className="mt-4 text-white/70 max-w-md">Every report is read by a real person within 24 hours. Strict moderation, automatic message filters, and zero tolerance for harassment — built into the product, not bolted on later.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -446,77 +446,107 @@ function ProfileEditor({ user, profile, onSaved }) {
   )
 }
 
-function VerificationBadge({ verified }) {
+function VerificationBadge({ verified, size = 'sm' }) {
   if (!verified) return null
+  const dim = size === 'lg' ? 'w-6 h-6' : 'w-[18px] h-[18px]'
+  const ic = size === 'lg' ? 'w-4 h-4' : 'w-3 h-3'
   return (
-    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500" title="Verified">
-      <CheckCircle2 className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
+    <span className={`inline-flex items-center justify-center ${dim} rounded-full bg-gradient-to-br from-sky-400 to-blue-600 ring-2 ring-background shadow-sm shadow-blue-500/40`} title="Verified profile">
+      <CheckCircle2 className={`${ic} text-white`} strokeWidth={3} />
     </span>
   )
 }
 
-function ProfileCard({ profile, onLike, onSkip, onReport }) {
+function SmartImg({ src, alt, className = '', sizes }) {
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      {!loaded && (
+        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] via-white/[0.08] to-white/[0.03] animate-shimmer" />
+      )}
+      {src && (
+        <img
+          src={src}
+          alt={alt}
+          sizes={sizes}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setLoaded(true)}
+          className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        />
+      )}
+    </div>
+  )
+}
+
+function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = profile.photos || []
   return (
-    <div className="snap-start min-h-[calc(100vh-4rem)] flex items-center py-4 md:py-8">
-      <Card className="glass-strong border-white/10 overflow-hidden w-full max-w-md mx-auto rounded-3xl">
-        <div className="relative aspect-[3/4] bg-white/5">
-          {photos[photoIdx] ? (
-            <img src={photos[photoIdx]} alt={profile.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-white/30"><Users className="w-16 h-16" /></div>
-          )}
+    <div className="snap-start min-h-[calc(100vh-4rem)] flex items-center py-3 md:py-6 fade-up" style={{ animationDelay: `${Math.min(index * 0.05, 0.3)}s` }}>
+      <Card className="glass-strong border-white/10 overflow-hidden w-full max-w-md mx-auto rounded-3xl shadow-2xl shadow-black/30 hover:border-white/15 transition-colors">
+        <div className="relative aspect-[4/5] bg-white/[0.03]">
+          <SmartImg src={photos[photoIdx]} alt={profile.name} className="w-full h-full" />
+
+          {/* photo dots */}
           {photos.length > 1 && (
-            <div className="absolute top-3 left-3 right-3 flex gap-1">
+            <div className="absolute top-3 left-3 right-3 flex gap-1 z-10">
               {photos.map((_, i) => (
-                <div key={i} className={`h-1 flex-1 rounded-full transition ${i === photoIdx ? 'bg-white' : 'bg-white/30'}`} />
+                <div key={i} className={`h-[3px] flex-1 rounded-full transition-all duration-300 ${i === photoIdx ? 'bg-white' : 'bg-white/25'}`} />
               ))}
             </div>
           )}
-          <button onClick={() => setPhotoIdx(i => Math.max(0, i-1))} className="absolute left-0 top-0 w-1/3 h-full" aria-label="Prev" />
-          <button onClick={() => setPhotoIdx(i => Math.min(photos.length-1, i+1))} className="absolute right-0 top-0 w-1/3 h-full" aria-label="Next" />
 
+          {/* tap zones */}
+          <button onClick={() => setPhotoIdx(i => Math.max(0, i-1))} className="absolute left-0 top-0 w-1/3 h-full z-[5]" aria-label="Previous photo" />
+          <button onClick={() => setPhotoIdx(i => Math.min(photos.length-1, i+1))} className="absolute right-0 top-0 w-1/3 h-full z-[5]" aria-label="Next photo" />
+
+          {/* online pill */}
           {profile.online && (
-            <div className="absolute top-4 right-4 glass rounded-full px-2.5 py-1 flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" />
-              <span className="text-xs font-medium">Online</span>
+            <div className="absolute top-5 right-3 z-10 glass rounded-full px-2.5 py-[5px] flex items-center gap-1.5 border-white/15">
+              <span className="relative flex w-1.5 h-1.5">
+                <span className="absolute inset-0 rounded-full bg-[#00ff88] animate-ping opacity-70" />
+                <span className="relative rounded-full w-1.5 h-1.5 bg-[#00ff88]" />
+              </span>
+              <span className="text-[11px] font-semibold tracking-wide">Online</span>
             </div>
           )}
 
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent p-5 pt-16">
+          {/* gradient + info overlay */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent p-5 pt-20 z-[6]">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-2xl font-extrabold">{profile.name}, {profile.age}</h3>
+              <h3 className="text-2xl md:text-[26px] font-extrabold leading-tight">{profile.name}<span className="text-white/70 font-bold">, {profile.age}</span></h3>
               <VerificationBadge verified={profile.verified} />
             </div>
-            <div className="flex items-center gap-2 text-sm text-white/70 mt-1 flex-wrap">
-              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{profile.city}</span>
-              <span>·</span>
-              <span>{profile.gymName}</span>
+            <div className="flex items-center gap-1.5 text-[13px] text-white/70 mt-1">
+              <MapPin className="w-3.5 h-3.5" />
+              <span>{profile.city}</span>
+              <span className="text-white/30">·</span>
+              <span className="text-white/85 font-medium">{profile.gymName}</span>
             </div>
             <div className="flex flex-wrap gap-1.5 mt-3">
-              <Badge className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30 hover:bg-[#00ff88]/15">{profile.goal}</Badge>
-              <Badge className="bg-white/10 text-white border-white/15 hover:bg-white/10">{profile.level}</Badge>
-              <Badge className="bg-white/10 text-white border-white/15 hover:bg-white/10"><Clock className="w-3 h-3 mr-1" />{profile.timing}</Badge>
+              <Badge className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30 hover:bg-[#00ff88]/15 font-semibold">{profile.goal}</Badge>
+              <Badge variant="outline" className="bg-white/10 text-white border-white/15 hover:bg-white/15">{profile.level}</Badge>
+              <Badge variant="outline" className="bg-white/10 text-white border-white/15 hover:bg-white/15"><Clock className="w-3 h-3 mr-1" />{profile.timing}</Badge>
             </div>
           </div>
         </div>
 
-        <div className="p-5">
-          {profile.bio && <p className="text-sm text-white/80 leading-relaxed">"{profile.bio}"</p>}
+        <div className="p-5 md:p-6">
+          {profile.bio && <p className="text-[15px] text-white/85 leading-[1.55]">{profile.bio}</p>}
           {profile.instagram && (
-            <a href={`https://instagram.com/${profile.instagram}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-white/60 mt-3 hover:text-[#00ff88]">
+            <a href={`https://instagram.com/${profile.instagram}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-white/55 mt-3 hover:text-[#00ff88] transition">
               <Instagram className="w-3.5 h-3.5" /> @{profile.instagram}
             </a>
           )}
-          <div className="grid grid-cols-3 gap-2 mt-5">
-            <Button onClick={() => onSkip(profile)} variant="outline" className="rounded-xl bg-white/5 border-white/10 hover:bg-white/10 h-12">
+          <div className="grid grid-cols-[1fr_2fr_1fr] gap-2 mt-5">
+            <Button onClick={() => onSkip(profile)} variant="outline" className="rounded-xl bg-white/5 border-white/10 hover:bg-white/10 active:scale-95 h-12 transition" aria-label="Skip">
               <X className="w-5 h-5" />
             </Button>
-            <Button onClick={() => onLike(profile)} className="rounded-xl bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold h-12">
-              <Heart className="w-5 h-5 mr-1.5 fill-black" /> Connect
+            <Button onClick={() => onLike(profile)} className="rounded-xl bg-[#00ff88] hover:bg-[#00cc6a] active:scale-[0.98] text-black font-semibold h-12 transition shadow-lg shadow-[#00ff88]/20">
+              <Heart className="w-[18px] h-[18px] mr-1.5 fill-black" /> Connect
             </Button>
-            <Button onClick={() => onReport(profile)} variant="outline" className="rounded-xl bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 h-12">
+            <Button onClick={() => onReport(profile)} variant="outline" className="rounded-xl bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 active:scale-95 h-12 transition" aria-label="Report">
               <AlertTriangle className="w-5 h-5" />
             </Button>
           </div>
@@ -635,7 +665,20 @@ function Discover() {
 
       <div className="max-w-md mx-auto px-4 snap-y snap-mandatory">
         {profiles === null && (
-          <div className="space-y-4 pt-6"><Skeleton className="h-[600px] rounded-3xl bg-white/5" /></div>
+          <div className="space-y-4 pt-6">
+            <div className="rounded-3xl overflow-hidden glass-strong border-white/10">
+              <div className="aspect-[4/5] bg-gradient-to-br from-white/[0.04] via-white/[0.08] to-white/[0.03] animate-shimmer" />
+              <div className="p-5 space-y-3">
+                <div className="h-4 w-1/2 rounded-md bg-white/5 animate-shimmer" />
+                <div className="h-3 w-3/4 rounded-md bg-white/5 animate-shimmer" />
+                <div className="flex gap-2 pt-2">
+                  <div className="h-12 flex-1 rounded-xl bg-white/5 animate-shimmer" />
+                  <div className="h-12 flex-[2] rounded-xl bg-white/5 animate-shimmer" />
+                  <div className="h-12 flex-1 rounded-xl bg-white/5 animate-shimmer" />
+                </div>
+              </div>
+            </div>
+          </div>
         )}
         {profiles && profiles.length === 0 && (
           <div className="text-center py-24">
@@ -682,18 +725,22 @@ function Matches({ onOpenChat }) {
           </div>
         )}
         {matches?.map(m => (
-          <button key={m.id} onClick={() => onOpenChat(m)} className="w-full glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.06] transition text-left">
-            <Avatar className="w-14 h-14">
-              <AvatarImage src={m.otherProfile?.photos?.[0]} />
-              <AvatarFallback>{m.otherProfile?.name?.slice(0,1)}</AvatarFallback>
-            </Avatar>
+          <button key={m.id} onClick={() => onOpenChat(m)} className="w-full glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.07] hover:border-white/15 active:scale-[0.99] transition text-left">
+            <div className="relative">
+              <Avatar className="w-14 h-14 ring-1 ring-white/10">
+                <AvatarImage src={m.otherProfile?.photos?.[0]} />
+                <AvatarFallback>{m.otherProfile?.name?.slice(0,1)}</AvatarFallback>
+              </Avatar>
+              {m.otherProfile?.online && (
+                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-[#00ff88] ring-2 ring-background" />
+              )}
+            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-semibold truncate">{m.otherProfile?.name}, {m.otherProfile?.age}</span>
+                <span className="font-semibold truncate">{m.otherProfile?.name}<span className="text-white/60 font-medium">, {m.otherProfile?.age}</span></span>
                 <VerificationBadge verified={m.otherProfile?.verified} />
-                {m.otherProfile?.online && <div className="w-2 h-2 rounded-full bg-[#00ff88]" />}
               </div>
-              <div className="text-xs text-white/60 truncate">{m.otherProfile?.gymName} · {m.otherProfile?.goal}</div>
+              <div className="text-xs text-white/55 truncate mt-0.5">{m.otherProfile?.gymName} · {m.otherProfile?.goal} · {m.otherProfile?.timing}</div>
             </div>
             <ChevronRight className="w-5 h-5 text-white/40" />
           </button>
@@ -1192,13 +1239,13 @@ function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black ring-1 ring-[#00ff88]/40 shadow-2xl shadow-[#00ff88]/30 animate-pulse-glow">
+        <div className="flex flex-col items-center gap-5">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-black border border-[#00ff88]/30">
             <img src={LOGO} alt="Trainr" className="w-full h-full object-cover" />
           </div>
-          <div className="flex items-center gap-2.5 text-white/60 text-sm">
-            <Loader2 className="w-4 h-4 animate-spin text-[#00ff88]" />
-            <span>Loading Trainr...</span>
+          <div className="flex items-center gap-2 text-white/55 text-sm">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00ff88]" />
+            <span className="tracking-wide">Loading Trainr</span>
           </div>
         </div>
       </div>
