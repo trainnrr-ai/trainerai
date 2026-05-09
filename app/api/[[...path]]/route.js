@@ -91,7 +91,7 @@ async function handler(request, { params }) {
       if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       const body = await request.json()
       const photos = Array.isArray(body.photos) ? body.photos.filter(Boolean) : []
-      if (photos.length < 2) return NextResponse.json({ error: 'At least 2 photos required' }, { status: 400 })
+      if (photos.length < 3) return NextResponse.json({ error: 'At least 3 photos required' }, { status: 400 })
       if (photos.length > 5) return NextResponse.json({ error: 'Maximum 5 photos allowed' }, { status: 400 })
       const existing = await db.collection('profiles').findOne({ userId: user.id })
       const profileDoc = {

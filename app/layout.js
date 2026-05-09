@@ -1,10 +1,33 @@
 import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 
+const LOGO = 'https://customer-assets.emergentagent.com/job_workout-match-19/artifacts/u3kk6eqv_file_00000000e428720badf6b7f599a3a7f4.png'
+
 export const metadata = {
-  title: 'Trainr \u2014 Your Fitness Accountability Network',
+  metadataBase: new URL('https://trainr.in'),
+  title: 'Trainr — Your Fitness Accountability Network',
   description: 'Build your fitness network. Find verified workout partners nearby — matched by gym, goals, schedule and experience. A premium, safety-first fitness community platform.',
-  keywords: ['fitness network', 'gym partner', 'workout partner', 'training partner', 'fitness community', 'accountability partner', 'gym networking', 'trainr'],
+  keywords: ['fitness network', 'gym partner', 'workout partner', 'training partner', 'fitness community', 'accountability partner', 'gym networking', 'trainr', 'trainr.in'],
+  icons: {
+    icon: [{ url: LOGO, type: 'image/png' }],
+    apple: [{ url: LOGO }],
+    shortcut: [{ url: LOGO }],
+  },
+  openGraph: {
+    title: 'Trainr — Your Fitness Accountability Network',
+    description: 'Find verified workout partners nearby. Built for accountability, not dating.',
+    url: 'https://trainr.in',
+    siteName: 'Trainr',
+    images: [{ url: LOGO, width: 1024, height: 1024 }],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Trainr',
+    description: 'Your fitness accountability network',
+    images: [LOGO],
+  },
 }
 
 export default function RootLayout({ children }) {

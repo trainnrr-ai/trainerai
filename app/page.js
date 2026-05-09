@@ -21,6 +21,9 @@ import {
 } from 'lucide-react'
 
 const HERO_IMG = 'https://images.unsplash.com/photo-1648235692910-947cb90ddd97?w=1600&auto=format&fit=crop'
+const LOGO = 'https://customer-assets.emergentagent.com/job_workout-match-19/artifacts/u3kk6eqv_file_00000000e428720badf6b7f599a3a7f4.png'
+const INSTAGRAM_URL = 'https://instagram.com/trainr.in'
+const SUPPORT_EMAIL = 'hello@trainr.in'
 
 const GOALS = ['Weight Loss', 'Muscle Gain', 'Bulking', 'Leaning', 'Powerlifting', 'Cardio', 'General Fitness']
 const TIMINGS = ['Early Morning', 'Morning', 'Afternoon', 'Evening', 'Late Night']
@@ -37,9 +40,9 @@ function Navbar({ user, view, setView }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-strong">
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-        <button onClick={() => setView(user ? 'discover' : 'landing')} className="flex items-center gap-2 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#00ff88] to-[#00cc6a] flex items-center justify-center shadow-lg shadow-[#00ff88]/30 group-hover:scale-105 transition">
-            <Dumbbell className="w-5 h-5 text-black" strokeWidth={2.5} />
+        <button onClick={() => setView(user ? 'discover' : 'landing')} className="flex items-center gap-2.5 group">
+          <div className="w-9 h-9 rounded-xl overflow-hidden bg-black ring-1 ring-[#00ff88]/30 shadow-lg shadow-[#00ff88]/20 group-hover:scale-105 group-hover:shadow-[#00ff88]/40 transition">
+            <img src={LOGO} alt="Trainr" className="w-full h-full object-cover" />
           </div>
           <span className="text-xl font-extrabold tracking-tight">Trainr</span>
         </button>
@@ -47,6 +50,9 @@ function Navbar({ user, view, setView }) {
           <nav className="flex items-center gap-1 md:gap-2">
             <button onClick={() => setView('discover')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'discover' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Discover</button>
             <button onClick={() => setView('matches')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'matches' || view === 'chat' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Connections</button>
+            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" title="Follow Trainr on Instagram" className="hidden md:flex w-9 h-9 rounded-lg items-center justify-center text-white/60 hover:text-[#00ff88] hover:bg-white/5 transition">
+              <Instagram className="w-4 h-4" />
+            </a>
             <button onClick={() => setView('settings')} className="ml-1 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition overflow-hidden">
               <Avatar className="w-9 h-9">
                 <AvatarImage src={user.picture} />
@@ -55,14 +61,21 @@ function Navbar({ user, view, setView }) {
             </button>
           </nav>
         ) : (
-          <Button onClick={loginWithGoogle} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full px-5">Get Started</Button>
+          <div className="flex items-center gap-2 md:gap-3">
+            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" title="Follow Trainr on Instagram" className="hidden sm:flex w-9 h-9 rounded-lg items-center justify-center text-white/60 hover:text-[#00ff88] hover:bg-white/5 transition">
+              <Instagram className="w-4 h-4" />
+            </a>
+            <button onClick={() => setView('about')} className="hidden md:inline-flex px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition">About</button>
+            <button onClick={() => setView('contact')} className="hidden md:inline-flex px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition">Contact</button>
+            <Button onClick={loginWithGoogle} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full px-5">Get Started</Button>
+          </div>
         )}
       </div>
     </header>
   )
 }
 
-function Landing() {
+function Landing({ onNav }) {
   return (
     <div className="pt-16">
       <section className="relative overflow-hidden">
@@ -243,20 +256,45 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="border-t border-white/10 py-10">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row gap-6 items-center justify-between text-sm text-white/50">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#00ff88] to-[#00cc6a] flex items-center justify-center">
-              <Dumbbell className="w-4 h-4 text-black" strokeWidth={2.5} />
+      <footer className="border-t border-white/10 py-12 mt-8">
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
+          <div className="grid md:grid-cols-3 gap-8 mb-10">
+            <div>
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-9 h-9 rounded-xl overflow-hidden bg-black ring-1 ring-[#00ff88]/30">
+                  <img src={LOGO} alt="Trainr" className="w-full h-full object-cover" />
+                </div>
+                <span className="font-extrabold text-white text-lg">Trainr</span>
+              </div>
+              <p className="text-sm text-white/50 leading-relaxed max-w-xs">Your fitness accountability network. Find verified workout partners nearby. Built in India.</p>
+              <div className="flex items-center gap-3 mt-4">
+                <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="w-9 h-9 rounded-lg bg-white/5 hover:bg-[#00ff88]/15 hover:text-[#00ff88] flex items-center justify-center transition border border-white/10">
+                  <Instagram className="w-4 h-4" />
+                </a>
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="text-xs text-white/50 hover:text-[#00ff88] transition">{SUPPORT_EMAIL}</a>
+              </div>
             </div>
-            <span className="font-bold text-white">Trainr</span>
-            <span>© 2025</span>
+            <div>
+              <div className="text-xs uppercase tracking-wider text-white/40 font-semibold mb-3">Product</div>
+              <ul className="space-y-2 text-sm">
+                <li><button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="text-white/70 hover:text-white">Features</button></li>
+                <li><button onClick={loginWithGoogle} className="text-white/70 hover:text-white">Get Started</button></li>
+                <li><a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="text-white/70 hover:text-white">Instagram</a></li>
+              </ul>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wider text-white/40 font-semibold mb-3">Company</div>
+              <ul className="space-y-2 text-sm">
+                <li><button onClick={() => onNav('about')} className="text-white/70 hover:text-white">About</button></li>
+                <li><button onClick={() => onNav('privacy')} className="text-white/70 hover:text-white">Privacy Policy</button></li>
+                <li><button onClick={() => onNav('privacy')} className="text-white/70 hover:text-white">Terms</button></li>
+                <li><button onClick={() => onNav('contact')} className="text-white/70 hover:text-white">Contact</button></li>
+              </ul>
+            </div>
           </div>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-white">About</a>
-            <a href="#" className="hover:text-white">Privacy</a>
-            <a href="#" className="hover:text-white">Terms</a>
-            <a href="#" className="hover:text-white">Contact</a>
+          <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row gap-3 items-center justify-between text-xs text-white/40">
+            <div>© 2025 Trainr · trainr.in · All rights reserved.</div>
+            <div className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-[#00ff88]" /> Safety-first community</div>
           </div>
         </div>
       </footer>
@@ -306,7 +344,7 @@ function ProfileEditor({ user, profile, onSaved }) {
   }
 
   const submit = async () => {
-    if (form.photos.length < 2) { toast.error('Please add at least 2 photos'); return }
+    if (form.photos.length < 3) { toast.error('Please add at least 3 photos'); return }
     if (!form.name || !form.age || !form.gender || !form.city || !form.gymName || !form.level || !form.goal || !form.timing) {
       toast.error('Please fill all required fields'); return
     }
@@ -329,8 +367,8 @@ function ProfileEditor({ user, profile, onSaved }) {
 
       <div className="space-y-6 fade-up" style={{ animationDelay: '0.1s' }}>
         <Card className="glass border-white/10 p-6">
-          <Label className="text-base font-semibold mb-1 block">Profile Photos <span className="text-[#00ff88]">(2–5 required)</span></Label>
-          <p className="text-sm text-white/50 mb-4">Upload from your device or paste an image URL.</p>
+          <Label className="text-base font-semibold mb-1 block">Profile Photos <span className="text-[#00ff88]">(3–5 required)</span></Label>
+          <p className="text-sm text-white/50 mb-4">Upload from your device or paste an image URL. Real photos build trust faster.</p>
           <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mb-4">
             {form.photos.map((p, i) => (
               <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden bg-white/5 border border-white/10 group">
@@ -940,6 +978,167 @@ function SelfieVerifyDialog({ open, onOpenChange, onVerified }) {
   )
 }
 
+// ============ STATIC PAGES ============
+function PageShell({ title, kicker, children, onNav }) {
+  return (
+    <div className="pt-28 pb-20 fade-up">
+      <div className="max-w-4xl mx-auto px-4 md:px-6">
+        <button onClick={() => onNav('landing')} className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-[#00ff88] transition mb-6">
+          <ArrowLeft className="w-4 h-4" /> Back to home
+        </button>
+        {kicker && <Badge className="mb-4 bg-[#00ff88]/10 text-[#00ff88] border-[#00ff88]/30 rounded-full px-3 py-1">{kicker}</Badge>}
+        <h1 className="text-4xl md:text-6xl font-black tracking-tight">{title}</h1>
+        <div className="mt-10 space-y-6 text-white/75 leading-relaxed">
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AboutView({ onNav }) {
+  return (
+    <PageShell title="Built for the lifters who show up." kicker="About Trainr" onNav={onNav}>
+      <p className="text-lg md:text-xl text-white/80">
+        Trainr is your fitness accountability network. We help people in India find verified workout partners nearby — matched by gym, training schedule, goals, and experience level. No swiping. No dating. Just consistent, community-driven progress.
+      </p>
+
+      <div className="grid md:grid-cols-2 gap-4 pt-4">
+        {[
+          { i: Target, t: 'Why Trainr exists', d: 'Most fitness journeys fail alone. We make showing up easier by giving every lifter a partner who shares their goal and schedule.' },
+          { i: Users, t: 'Accountability culture', d: 'Trainr isn\u2019t a feed of highlight reels. It\u2019s a network where someone is waiting for you at the rack.' },
+          { i: ShieldCheck, t: 'Women safety commitment', d: 'Strict moderation, verified profiles, anti-creep filters and zero-tolerance on harassment. Reports are reviewed within 24 hours.' },
+          { i: BadgeCheck, t: 'Verified profiles', d: 'Selfie verification, Instagram linking, and gym membership checks build trust before the first message.' },
+          { i: Sparkles, t: 'Future vision', d: 'Workout streaks, partner check-ins, gym-level leaderboards, and trusted certified-trainer connections \u2014 coming soon.' },
+          { i: Activity, t: 'Built in India', d: 'For lifters in Mumbai, Bangalore, Delhi and beyond. Local gyms, local schedules, local community.' },
+        ].map((b, i) => (
+          <div key={i} className="glass rounded-2xl p-6">
+            <div className="w-10 h-10 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/20 flex items-center justify-center mb-3"><b.i className="w-5 h-5 text-[#00ff88]" /></div>
+            <h3 className="font-bold text-white">{b.t}</h3>
+            <p className="text-sm text-white/65 mt-1.5">{b.d}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="glass-strong rounded-3xl p-8 md:p-10 mt-6">
+        <h3 className="text-2xl font-extrabold">Our mission</h3>
+        <p className="mt-3 text-white/75">To make consistent training the default, not the exception. We do that by making it absurdly easy to find a trustworthy training partner — and by building a community that\u2019s safe, respectful, and proudly fitness-first.</p>
+        <div className="flex flex-wrap gap-3 mt-6">
+          <Button onClick={loginWithGoogle} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full">Get Started <ArrowRight className="w-4 h-4 ml-1.5" /></Button>
+          <Button onClick={() => onNav('contact')} variant="outline" className="bg-white/5 border-white/15 rounded-full">Contact us</Button>
+          <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer"><Button variant="outline" className="bg-white/5 border-white/15 rounded-full"><Instagram className="w-4 h-4 mr-2" /> @trainr.in</Button></a>
+        </div>
+      </div>
+    </PageShell>
+  )
+}
+
+function PrivacyView({ onNav }) {
+  const Section = ({ title, children }) => (
+    <div className="glass rounded-2xl p-6">
+      <h2 className="text-lg font-bold text-white">{title}</h2>
+      <div className="mt-2 text-sm text-white/70 leading-relaxed space-y-2">{children}</div>
+    </div>
+  )
+  return (
+    <PageShell title="Privacy Policy" kicker="Last updated: 2025" onNav={onNav}>
+      <p className="text-white/70">Trainr (trainr.in) is committed to protecting your privacy and building a safe fitness community. This page explains what we collect, how we use it, and how we keep you safe.</p>
+
+      <div className="grid gap-4">
+        <Section title="What we collect">
+          <p>Account info from Google Sign-in (name, email, profile picture), and the fitness profile you create: photos, age, gender, city, gym, height, weight, goals, schedule, bio, and optional Instagram username.</p>
+        </Section>
+        <Section title="Profile photos & uploads">
+          <p>You may upload 3 to 5 photos. By uploading, you confirm they are of you and that you have rights to use them. We may auto-flag images that violate our community standards.</p>
+        </Section>
+        <Section title="Profile verification">
+          <p>Verification (selfie, Instagram, gym membership) is optional but strongly encouraged. Verified profiles get a blue badge and higher visibility.</p>
+        </Section>
+        <Section title="Moderation & reporting">
+          <p>All chat messages pass through automated moderation. Reports are reviewed within 24 hours. We follow a clear escalation: <strong>Warning → Temporary suspension → Permanent ban</strong>.</p>
+        </Section>
+        <Section title="Anti-harassment policy">
+          <p>Trainr has zero tolerance for sexual content, harassment, hate speech, or any unwanted advance. Repeated violations result in a permanent ban without refund.</p>
+        </Section>
+        <Section title="Women safety">
+          <p>Women safety is a core priority. Anti-creep detection, easy one-tap report and block, women-only filter options, and strict verification standards are baked into the product.</p>
+        </Section>
+        <Section title="Your data, your control">
+          <p>You can edit, hide or delete your profile anytime from Settings. To request full account deletion, email <a href={`mailto:${SUPPORT_EMAIL}`} className="text-[#00ff88] underline">{SUPPORT_EMAIL}</a>.</p>
+        </Section>
+        <Section title="Contact">
+          <p>For privacy questions, write to <a href={`mailto:${SUPPORT_EMAIL}`} className="text-[#00ff88] underline">{SUPPORT_EMAIL}</a> or DM us on Instagram <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="text-[#00ff88] underline">@trainr.in</a>.</p>
+        </Section>
+      </div>
+    </PageShell>
+  )
+}
+
+function ContactView({ onNav }) {
+  const [form, setForm] = useState({ name: '', email: '', message: '' })
+  const [sending, setSending] = useState(false)
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!form.name || !form.email || !form.message) { toast.error('Please fill all fields'); return }
+    setSending(true)
+    // MOCKED: would POST to /api/contact in production
+    await new Promise(r => setTimeout(r, 700))
+    setSending(false)
+    setForm({ name: '', email: '', message: '' })
+    toast.success('Message sent!', { description: `We'll get back to you at ${form.email} within 24 hours.` })
+  }
+  return (
+    <PageShell title="Talk to the Trainr team." kicker="Contact" onNav={onNav}>
+      <p className="text-white/70 max-w-2xl">Trainr is committed to building a safe and supportive fitness community. Have a question, a partnership idea, or a safety concern? Reach out — we read every message.</p>
+
+      <div className="grid md:grid-cols-2 gap-4 pt-2">
+        <div className="space-y-3">
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="block glass rounded-2xl p-5 hover:bg-white/[0.07] transition">
+            <div className="text-xs uppercase tracking-wider text-white/40 mb-1">Email</div>
+            <div className="font-semibold text-[#00ff88]">{SUPPORT_EMAIL}</div>
+            <div className="text-xs text-white/50 mt-1">For support, partnerships, press</div>
+          </a>
+          <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="block glass rounded-2xl p-5 hover:bg-white/[0.07] transition">
+            <div className="text-xs uppercase tracking-wider text-white/40 mb-1">Instagram</div>
+            <div className="font-semibold text-[#00ff88] flex items-center gap-2"><Instagram className="w-4 h-4" /> @trainr.in</div>
+            <div className="text-xs text-white/50 mt-1">DMs open · daily updates · community spotlights</div>
+          </a>
+          <div className="glass rounded-2xl p-5">
+            <div className="text-xs uppercase tracking-wider text-white/40 mb-1">Response time</div>
+            <div className="font-semibold">Within 24 hours</div>
+            <div className="text-xs text-white/50 mt-1">Safety reports prioritized within 4 hours.</div>
+          </div>
+          <div className="glass rounded-2xl p-5">
+            <div className="text-xs uppercase tracking-wider text-white/40 mb-1">Community support</div>
+            <div className="font-semibold">Built on trust</div>
+            <div className="text-xs text-white/50 mt-1">Every report is read by a real human. No bots.</div>
+          </div>
+        </div>
+
+        <form onSubmit={submit} className="glass-strong rounded-2xl p-6 space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wide text-white/50">Your name</Label>
+            <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="bg-white/5 border-white/10" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wide text-white/50">Email</Label>
+            <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="bg-white/5 border-white/10" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wide text-white/50">Message</Label>
+            <Textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} className="bg-white/5 border-white/10 min-h-[140px]" placeholder="What\u2019s on your mind?" />
+          </div>
+          <Button type="submit" disabled={sending} className="w-full bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full h-11">
+            {sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</> : <>Send Message <ArrowRight className="w-4 h-4 ml-2" /></>}
+          </Button>
+          <p className="text-xs text-white/40 text-center">Trainr is committed to building a safe and supportive fitness community.</p>
+        </form>
+      </div>
+    </PageShell>
+  )
+}
+
+
 function App() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -993,9 +1192,14 @@ function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-5 h-5 animate-spin text-[#00ff88]" />
-          <span className="text-white/60">Loading Trainr...</span>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black ring-1 ring-[#00ff88]/40 shadow-2xl shadow-[#00ff88]/30 animate-pulse-glow">
+            <img src={LOGO} alt="Trainr" className="w-full h-full object-cover" />
+          </div>
+          <div className="flex items-center gap-2.5 text-white/60 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin text-[#00ff88]" />
+            <span>Loading Trainr...</span>
+          </div>
         </div>
       </div>
     )
@@ -1004,7 +1208,10 @@ function App() {
   return (
     <div className="min-h-screen">
       <Navbar user={user} view={view} setView={setView} />
-      {!user && <Landing />}
+      {!user && view === 'landing' && <Landing onNav={setView} />}
+      {!user && view === 'about' && <AboutView onNav={setView} />}
+      {!user && view === 'privacy' && <PrivacyView onNav={setView} />}
+      {!user && view === 'contact' && <ContactView onNav={setView} />}
       {user && view === 'profile-edit' && <ProfileEditor user={user} profile={profile} onSaved={handleProfileSaved} />}
       {user && view === 'discover' && (profile ? <Discover /> : <ProfileEditor user={user} profile={null} onSaved={handleProfileSaved} />)}
       {user && view === 'matches' && <Matches onOpenChat={(m) => { setActiveChat(m); setView('chat') }} />}
