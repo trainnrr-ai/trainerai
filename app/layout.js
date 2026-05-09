@@ -2,9 +2,9 @@ import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 
 export const metadata = {
-  title: 'Spottr \u2014 Find Your Perfect Workout Partner',
-  description: 'Connect with fitness partners nearby based on gym, goals, and workout schedule. A premium, women-safety-first fitness networking platform.',
-  keywords: ['fitness', 'gym partner', 'workout buddy', 'fitness community', 'gym', 'spottr'],
+  title: 'Trainr \u2014 Your Fitness Accountability Network',
+  description: 'Build your fitness network. Find verified workout partners nearby — matched by gym, goals, schedule and experience. A premium, safety-first fitness community platform.',
+  keywords: ['fitness network', 'gym partner', 'workout partner', 'training partner', 'fitness community', 'accountability partner', 'gym networking', 'trainr'],
 }
 
 export default function RootLayout({ children }) {

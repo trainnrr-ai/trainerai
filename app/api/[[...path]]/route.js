@@ -32,7 +32,7 @@ async function handler(request, { params }) {
   try {
     // Health
     if (path === '' && method === 'GET') {
-      return NextResponse.json({ ok: true, app: 'spottr' })
+      return NextResponse.json({ ok: true, app: 'trainr' })
     }
 
     // === AUTH ===
@@ -130,6 +130,24 @@ async function handler(request, { params }) {
       if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       const profile = await db.collection('profiles').findOne({ userId: user.id })
       return NextResponse.json({ profile: profile || null })
+    }
+
+    if (path === 'profile/verify-selfie' && method === 'POST') {
+      const user = await getUserFromRequest(request)
+      if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      const { selfie } = await request.json()
+      if (!selfie || typeof selfie !== 'string' || !selfie.startsWith('data:image/')) {
+        return NextResponse.json({ error: 'Invalid selfie image' }, { status: 400 })
+      }
+      const existing = await db.collection('profiles').findOne({ userId: user.id })
+      if (!existing) return NextResponse.json({ error: 'Create your profile first' }, { status: 400 })
+      // MOCKED: real liveness/face-match check would happen here.
+      await db.collection('profiles').updateOne(
+        { userId: user.id },
+        { $set: { 'verifications.selfie': true, verified: true, selfiePhoto: selfie, updatedAt: new Date() } }
+      )
+      const updated = await db.collection('profiles').findOne({ userId: user.id })
+      return NextResponse.json({ ok: true, profile: updated })
     }
 
     // === DISCOVER ===

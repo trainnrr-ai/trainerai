@@ -17,7 +17,7 @@ import { toast } from 'sonner'
 import {
   Dumbbell, MapPin, Clock, Target, ShieldCheck, MessageCircle, Heart, X, ChevronRight,
   Sparkles, Users, Lock, AlertTriangle, Instagram, Send, Filter, ArrowLeft, LogOut,
-  BadgeCheck, Flame, Activity, ArrowRight, Star, CheckCircle2, Loader2,
+  BadgeCheck, Flame, Activity, ArrowRight, Star, CheckCircle2, Loader2, Camera, RefreshCw,
 } from 'lucide-react'
 
 const HERO_IMG = 'https://images.unsplash.com/photo-1648235692910-947cb90ddd97?w=1600&auto=format&fit=crop'
@@ -41,12 +41,12 @@ function Navbar({ user, view, setView }) {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#00ff88] to-[#00cc6a] flex items-center justify-center shadow-lg shadow-[#00ff88]/30 group-hover:scale-105 transition">
             <Dumbbell className="w-5 h-5 text-black" strokeWidth={2.5} />
           </div>
-          <span className="text-xl font-extrabold tracking-tight">Spottr</span>
+          <span className="text-xl font-extrabold tracking-tight">Trainr</span>
         </button>
         {user ? (
           <nav className="flex items-center gap-1 md:gap-2">
             <button onClick={() => setView('discover')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'discover' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Discover</button>
-            <button onClick={() => setView('matches')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'matches' || view === 'chat' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Matches</button>
+            <button onClick={() => setView('matches')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'matches' || view === 'chat' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Connections</button>
             <button onClick={() => setView('settings')} className="ml-1 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition overflow-hidden">
               <Avatar className="w-9 h-9">
                 <AvatarImage src={user.picture} />
@@ -72,13 +72,13 @@ function Landing() {
           <div className="grid md:grid-cols-2 gap-10 items-center">
             <div className="fade-up">
               <Badge className="mb-5 bg-[#00ff88]/10 text-[#00ff88] hover:bg-[#00ff88]/15 border-[#00ff88]/30 rounded-full px-3 py-1">
-                <Sparkles className="w-3 h-3 mr-1.5" /> Premium fitness networking
+                <Sparkles className="w-3 h-3 mr-1.5" /> Premium fitness network
               </Badge>
               <h1 className="text-5xl md:text-7xl font-black leading-[1.05] tracking-tight">
                 Find Your Perfect <span className="text-gradient">Workout Partner.</span>
               </h1>
               <p className="mt-6 text-lg md:text-xl text-white/70 max-w-lg leading-relaxed">
-                Connect with fitness partners nearby based on gym, goals, and workout schedule. Built for accountability — not dating.
+                Build your fitness network. Connect with verified training partners nearby — matched by gym, goals, and schedule. Built for accountability, not dating.
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <Button onClick={loginWithGoogle} size="lg" className="bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full h-12 px-7 text-base neon-glow">
@@ -95,14 +95,14 @@ function Landing() {
             </div>
             <div className="relative fade-up" style={{ animationDelay: '0.15s' }}>
               <div className="relative aspect-[4/5] rounded-3xl overflow-hidden glass-strong">
-                <img src={HERO_IMG} alt="Spottr" className="w-full h-full object-cover opacity-80" />
+                <img src={HERO_IMG} alt="Trainr" className="w-full h-full object-cover opacity-80" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6">
                   <div className="glass rounded-2xl p-4 animate-float">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-[#00ff88]/20 flex items-center justify-center"><Flame className="w-5 h-5 text-[#00ff88]" /></div>
                       <div>
-                        <div className="text-sm font-semibold">Match found near Cult Fit</div>
+                        <div className="text-sm font-semibold">Connection found near Cult Fit</div>
                         <div className="text-xs text-white/60">Same goal · Powerlifting · 6AM</div>
                       </div>
                     </div>
@@ -128,14 +128,14 @@ function Landing() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { icon: Sparkles, title: 'Smart Matching', desc: 'Match by goal, gym, schedule and experience — not selfies.' },
+              { icon: Sparkles, title: 'Smart Matching', desc: 'Connect by goal, gym, schedule and experience — not selfies.' },
               { icon: MapPin, title: 'Nearby Gym Partners', desc: 'See lifters at your gym, your timing, your level.' },
               { icon: Target, title: 'Workout Accountability', desc: 'Show up because someone\u2019s waiting at the rack.' },
-              { icon: MessageCircle, title: 'Real-Time Chat', desc: 'Coordinate sessions, share PRs, build the rep.' },
+              { icon: MessageCircle, title: 'In-App Chat', desc: 'Coordinate sessions, share PRs, build the rep.' },
               { icon: BadgeCheck, title: 'Verified Profiles', desc: 'Selfie + Instagram + gym member checks.' },
               { icon: ShieldCheck, title: 'Women Safety Focus', desc: 'Strict moderation, anti-creep detection, easy reporting.' },
               { icon: Clock, title: 'Schedule Matching', desc: 'Find partners who train when you do.' },
-              { icon: Users, title: 'Community First', desc: 'A place to grow stronger, together.' },
+              { icon: Users, title: 'Community First', desc: 'A network to grow stronger, together.' },
               { icon: Activity, title: 'Track Together', desc: 'Coming soon: session logs and streaks.' },
             ].map((f, i) => (
               <div key={i} className="group glass rounded-2xl p-6 hover:bg-white/[0.06] transition fade-up" style={{ animationDelay: `${i * 0.04}s` }}>
@@ -159,8 +159,8 @@ function Landing() {
           <div className="grid md:grid-cols-4 gap-4">
             {[
               { n: '01', t: 'Create Profile', d: 'Tell us your gym, goals and schedule.' },
-              { n: '02', t: 'Discover Partners', d: 'Scroll a clean feed of matched lifters.' },
-              { n: '03', t: 'Match & Chat', d: 'Like back to unlock real-time chat.' },
+              { n: '02', t: 'Discover Partners', d: 'Browse a clean feed of matched lifters.' },
+              { n: '03', t: 'Connect & Chat', d: 'Mutual connection unlocks chat.' },
               { n: '04', t: 'Train Together', d: 'Show up. Stay consistent. Grow.' },
             ].map((s, i) => (
               <div key={i} className="glass rounded-2xl p-6 relative overflow-hidden">
@@ -181,7 +181,7 @@ function Landing() {
               <div>
                 <Badge className="mb-4 bg-pink-500/10 text-pink-300 border-pink-500/30">Safety first</Badge>
                 <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">Women's safety is non-negotiable.</h2>
-                <p className="mt-4 text-white/70 max-w-md">Spottr is built with strict moderation, anti-harassment systems, and a zero-tolerance policy for inappropriate behavior.</p>
+                <p className="mt-4 text-white/70 max-w-md">Trainr is built with strict moderation, anti-harassment systems, and a zero-tolerance policy for inappropriate behavior.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -205,7 +205,7 @@ function Landing() {
       <section className="py-20 md:py-28">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight">Lifters love Spottr.</h2>
+            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight">Lifters love Trainr.</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-4">
             {[
@@ -249,7 +249,7 @@ function Landing() {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#00ff88] to-[#00cc6a] flex items-center justify-center">
               <Dumbbell className="w-4 h-4 text-black" strokeWidth={2.5} />
             </div>
-            <span className="font-bold text-white">Spottr</span>
+            <span className="font-bold text-white">Trainr</span>
             <span>© 2025</span>
           </div>
           <div className="flex gap-6">
@@ -561,8 +561,8 @@ function Discover() {
     try {
       const res = await fetch('/api/profiles/like', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: p.id }) })
       const data = await res.json()
-      if (data.matched) toast.success(`It's a match with ${p.name}!`, { description: 'Open Matches to start chatting.' })
-      else toast(`Liked ${p.name}`, { description: 'They\u2019ll be notified.' })
+      if (data.matched) toast.success(`Mutual connection with ${p.name}!`, { description: 'Open Connections to start chatting.' })
+      else toast(`Connected with ${p.name}`, { description: 'They\u2019ll be notified.' })
     } catch { toast.error('Failed to like') }
   }
 
@@ -617,7 +617,7 @@ function Discover() {
       <Dialog open={!!reportProfile} onOpenChange={(o) => !o && setReportProfile(null)}>
         <DialogContent className="bg-[#0a0b0d] border-white/10">
           <DialogHeader><DialogTitle>Report {reportProfile?.name}</DialogTitle></DialogHeader>
-          <p className="text-sm text-white/60">Help us keep Spottr safe. They will also be blocked.</p>
+          <p className="text-sm text-white/60">Help us keep Trainr safe. They will also be blocked.</p>
           <Textarea value={reportReason} onChange={e => setReportReason(e.target.value)} placeholder="Reason (e.g. inappropriate messages, fake profile, harassment)..." className="bg-white/5 border-white/10" />
           <Button onClick={submitReport} className="bg-red-500 hover:bg-red-600 text-white">Submit Report & Block</Button>
         </DialogContent>
@@ -633,14 +633,14 @@ function Matches({ onOpenChat }) {
   }, [])
   return (
     <div className="pt-20 pb-12 max-w-2xl mx-auto px-4 md:px-6">
-      <h1 className="text-3xl md:text-4xl font-black tracking-tight">Matches</h1>
-      <p className="text-white/60 mt-1">Mutual connections ready to train together.</p>
+      <h1 className="text-3xl md:text-4xl font-black tracking-tight">Connections</h1>
+      <p className="text-white/60 mt-1">Mutual workout partners ready to train together.</p>
       <div className="mt-8 space-y-3">
         {matches === null && [1,2,3].map(i => <Skeleton key={i} className="h-20 rounded-2xl bg-white/5" />)}
         {matches && matches.length === 0 && (
           <div className="glass rounded-2xl p-10 text-center">
             <Heart className="w-10 h-10 mx-auto text-[#00ff88] mb-3" />
-            <p className="text-white/70">No matches yet. Keep discovering!</p>
+            <p className="text-white/70">No connections yet. Keep discovering!</p>
           </div>
         )}
         {matches?.map(m => (
@@ -711,7 +711,7 @@ function Chat({ match, currentUserId, onBack }) {
       <div ref={scrollerRef} className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-6 space-y-2">
           {messages.length === 0 && (
-            <div className="text-center text-sm text-white/50 py-12">You matched! Say hi 👋 — coordinate your first session.</div>
+            <div className="text-center text-sm text-white/50 py-12">{`You're connected! Say hi 👋 — coordinate your first session.`}</div>
           )}
           {messages.map(m => {
             const mine = m.fromUserId === currentUserId
@@ -736,7 +736,8 @@ function Chat({ match, currentUserId, onBack }) {
   )
 }
 
-function SettingsView({ user, profile, onEditProfile, onLogout }) {
+function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated }) {
+  const [showSelfie, setShowSelfie] = useState(false)
   return (
     <div className="pt-20 pb-12 max-w-2xl mx-auto px-4 md:px-6">
       <h1 className="text-3xl md:text-4xl font-black tracking-tight">Settings</h1>
@@ -750,17 +751,29 @@ function SettingsView({ user, profile, onEditProfile, onLogout }) {
           <Button onClick={onEditProfile} variant="outline" className="bg-white/5 border-white/10">Edit</Button>
         </Card>
         <Card className="glass border-white/10 p-5">
-          <h3 className="font-semibold mb-3">Verification</h3>
-          <div className="space-y-2 text-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold">Verification</h3>
+            {profile?.verified && <Badge className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30">Verified ✓</Badge>}
+          </div>
+          <div className="space-y-2 text-sm mb-4">
             <Row icon={CheckCircle2} label="Selfie verification" status={profile?.verifications?.selfie} />
             <Row icon={Instagram} label="Instagram linked" status={profile?.verifications?.instagram} />
             <Row icon={Dumbbell} label="Verified gym member" status={profile?.verifications?.gym} />
           </div>
+          {!profile?.verifications?.selfie && (
+            <Button onClick={() => setShowSelfie(true)} className="w-full bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold">
+              <Camera className="w-4 h-4 mr-2" /> Verify with Selfie
+            </Button>
+          )}
+          {profile?.verifications?.selfie && (
+            <p className="text-xs text-[#00ff88]/80">{`Selfie verified. You've earned the trusted badge.`}</p>
+          )}
         </Card>
         <button onClick={onLogout} className="w-full glass rounded-2xl p-5 flex items-center gap-3 hover:bg-red-500/10 transition text-red-400">
           <LogOut className="w-5 h-5" /> <span className="font-semibold">Log out</span>
         </button>
       </div>
+      <SelfieVerifyDialog open={showSelfie} onOpenChange={setShowSelfie} onVerified={(p) => onProfileUpdated?.(p)} />
     </div>
   )
 }
@@ -771,6 +784,159 @@ function Row({ icon: Icon, label, status }) {
       <div className="flex items-center gap-2"><Icon className="w-4 h-4 text-white/50" /> {label}</div>
       {status ? <Badge className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30">Verified</Badge> : <Badge variant="outline" className="bg-white/5 border-white/10 text-white/50">Pending</Badge>}
     </div>
+  )
+}
+
+function SelfieVerifyDialog({ open, onOpenChange, onVerified }) {
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
+  const [phase, setPhase] = useState('idle') // idle | streaming | captured | submitting
+  const [snap, setSnap] = useState(null)
+  const [error, setError] = useState(null)
+
+  const startCamera = async () => {
+    setError(null)
+    setSnap(null)
+    setPhase('streaming')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
+        audio: false,
+      })
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+      }
+    } catch (e) {
+      setError('Camera access denied. Please allow camera permissions and try again.')
+      setPhase('idle')
+    }
+  }
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+  }
+
+  const capture = () => {
+    if (!videoRef.current) return
+    const video = videoRef.current
+    const canvas = document.createElement('canvas')
+    const size = Math.min(video.videoWidth || 480, video.videoHeight || 480)
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    // Mirror + crop center square
+    ctx.translate(size, 0)
+    ctx.scale(-1, 1)
+    const sx = ((video.videoWidth || size) - size) / 2
+    const sy = ((video.videoHeight || size) - size) / 2
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+    setSnap(dataUrl)
+    setPhase('captured')
+    stopCamera()
+  }
+
+  const retake = () => {
+    setSnap(null)
+    startCamera()
+  }
+
+  const submit = async () => {
+    if (!snap) return
+    setPhase('submitting')
+    try {
+      const res = await fetch('/api/profile/verify-selfie', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selfie: snap }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Verification failed')
+      toast.success('Selfie verified!', { description: 'Your blue badge is now active.' })
+      onVerified?.(data.profile)
+      handleClose()
+    } catch (e) {
+      toast.error(e.message)
+      setPhase('captured')
+    }
+  }
+
+  const handleClose = () => {
+    stopCamera()
+    setPhase('idle')
+    setSnap(null)
+    setError(null)
+    onOpenChange(false)
+  }
+
+  useEffect(() => () => stopCamera(), [])
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
+      <DialogContent className="bg-[#0a0b0d] border-white/10 max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Camera className="w-5 h-5 text-[#00ff88]" /> Selfie Verification</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-white/60">Take a clear selfie to earn your verified badge. Your face should be centered and well-lit.</p>
+
+        <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-black/40 border border-white/10">
+          {phase === 'idle' && !snap && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/50">
+              <Camera className="w-14 h-14" />
+              <p className="text-sm">Camera off</p>
+            </div>
+          )}
+          {phase === 'streaming' && (
+            <video ref={videoRef} className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} playsInline muted />
+          )}
+          {snap && phase !== 'streaming' && (
+            <img src={snap} alt="Selfie" className="w-full h-full object-cover" />
+          )}
+          {/* Face guide */}
+          {phase === 'streaming' && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-3/5 h-3/5 rounded-full border-2 border-[#00ff88]/60 border-dashed" />
+            </div>
+          )}
+        </div>
+
+        {error && <p className="text-sm text-red-400">{error}</p>}
+
+        <div className="flex gap-2">
+          {phase === 'idle' && !snap && (
+            <Button onClick={startCamera} className="flex-1 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold">
+              <Camera className="w-4 h-4 mr-2" /> Open Camera
+            </Button>
+          )}
+          {phase === 'streaming' && (
+            <Button onClick={capture} className="flex-1 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold">
+              Capture Selfie
+            </Button>
+          )}
+          {phase === 'captured' && (
+            <>
+              <Button onClick={retake} variant="outline" className="bg-white/5 border-white/10">
+                <RefreshCw className="w-4 h-4 mr-2" /> Retake
+              </Button>
+              <Button onClick={submit} className="flex-1 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold">
+                <CheckCircle2 className="w-4 h-4 mr-2" /> Submit for Verification
+              </Button>
+            </>
+          )}
+          {phase === 'submitting' && (
+            <Button disabled className="flex-1 bg-[#00ff88]/60 text-black">
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying...
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-white/40 text-center">Your selfie is reviewed for liveness & match against your profile photos.</p>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -829,7 +995,7 @@ function App() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin text-[#00ff88]" />
-          <span className="text-white/60">Loading Spottr...</span>
+          <span className="text-white/60">Loading Trainr...</span>
         </div>
       </div>
     )
@@ -843,7 +1009,7 @@ function App() {
       {user && view === 'discover' && (profile ? <Discover /> : <ProfileEditor user={user} profile={null} onSaved={handleProfileSaved} />)}
       {user && view === 'matches' && <Matches onOpenChat={(m) => { setActiveChat(m); setView('chat') }} />}
       {user && view === 'chat' && activeChat && <Chat match={activeChat} currentUserId={user.id} onBack={() => { setActiveChat(null); setView('matches') }} />}
-      {user && view === 'settings' && <SettingsView user={user} profile={profile} onEditProfile={() => setView('profile-edit')} onLogout={handleLogout} />}
+      {user && view === 'settings' && <SettingsView user={user} profile={profile} onEditProfile={() => setView('profile-edit')} onLogout={handleLogout} onProfileUpdated={(p) => setProfile(p)} />}
     </div>
   )
 }
