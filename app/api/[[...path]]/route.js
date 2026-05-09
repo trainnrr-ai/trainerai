@@ -3,7 +3,7 @@ import { getDb } from '@/lib/mongo'
 import { buildSeedProfiles } from '@/lib/seed'
 import { v4 as uuidv4 } from 'uuid'
 
-const AUTH_API = 'https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data'
+const AUTH_API = process.env.EMERGENT_AUTH_URL || 'https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data'
 
 async function getUserFromRequest(request) {
   const cookie = request.cookies.get('spottr_session')?.value
@@ -173,11 +173,15 @@ async function handler(request, { params }) {
       if (filters.verifiedOnly) query.verified = true
       let excludeIds = []
       if (user) {
-        const myProfile = await db.collection('profiles').findOne({ userId: user.id })
+        const myProfile = await db.collection('profiles').findOne({ userId: user.id }, { projection: { id: 1 } })
         if (myProfile) excludeIds.push(myProfile.id)
-        const interactions = await db.collection('interactions').find({ fromUserId: user.id, action: { $in: ['skip', 'like'] } }).toArray()
+        const interactions = await db.collection('interactions')
+          .find({ fromUserId: user.id, action: { $in: ['skip', 'like'] } }, { projection: { toProfileId: 1, _id: 0 } })
+          .toArray()
         excludeIds.push(...interactions.map(i => i.toProfileId))
-        const blocks = await db.collection('blocks').find({ blockerId: user.id }).toArray()
+        const blocks = await db.collection('blocks')
+          .find({ blockerId: user.id }, { projection: { blockedProfileId: 1, _id: 0 } })
+          .toArray()
         excludeIds.push(...blocks.map(b => b.blockedProfileId))
       }
       if (excludeIds.length) query.id = { $nin: excludeIds }
@@ -246,12 +250,20 @@ async function handler(request, { params }) {
     if (path === 'matches' && method === 'GET') {
       const user = await getUserFromRequest(request)
       if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      const matches = await db.collection('matches').find({ $or: [{ userA: user.id }, { userB: user.id }] }).sort({ createdAt: -1 }).toArray()
-      const enriched = await Promise.all(matches.map(async (m) => {
+      const matches = await db.collection('matches')
+        .find({ $or: [{ userA: user.id }, { userB: user.id }] })
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .toArray()
+      const otherProfileIds = matches.map(m => (m.userA === user.id ? m.profileB : m.profileA)).filter(Boolean)
+      const profiles = otherProfileIds.length
+        ? await db.collection('profiles').find({ id: { $in: otherProfileIds } }).toArray()
+        : []
+      const profileById = Object.fromEntries(profiles.map(p => [p.id, p]))
+      const enriched = matches.map(m => {
         const otherProfileId = m.userA === user.id ? m.profileB : m.profileA
-        const otherProfile = await db.collection('profiles').findOne({ id: otherProfileId })
-        return { ...m, otherProfile }
-      }))
+        return { ...m, otherProfile: profileById[otherProfileId] || null }
+      })
       return NextResponse.json({ matches: enriched })
     }
 
@@ -262,7 +274,11 @@ async function handler(request, { params }) {
       const url = new URL(request.url)
       const matchId = url.searchParams.get('matchId')
       if (!matchId) return NextResponse.json({ error: 'matchId required' }, { status: 400 })
-      const msgs = await db.collection('messages').find({ matchId }).sort({ createdAt: 1 }).toArray()
+      const msgs = await db.collection('messages')
+        .find({ matchId })
+        .sort({ createdAt: 1 })
+        .limit(200)
+        .toArray()
       return NextResponse.json({ messages: msgs })
     }
 
