@@ -17,7 +17,7 @@ import { toast } from 'sonner'
 import {
   Dumbbell, MapPin, Clock, Target, MessageCircle, Heart, X, ChevronRight,
   Sparkles, Users, Lock, AlertTriangle, Instagram, Send, Filter, ArrowLeft, LogOut,
-  Flame, ArrowRight, Loader2, Camera, Bell, Navigation, Zap, Crown, ChevronLeft, Check,
+  Flame, ArrowRight, Loader2, Camera, Bell, Navigation, Zap, Crown, ChevronLeft, Check, RefreshCw,
 } from 'lucide-react'
 
 // Shared constants & utilities
@@ -1025,6 +1025,16 @@ function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated
           <Badge className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30">Verified</Badge>
         ) : status === 'pending' ? (
           <Badge variant="outline" className="bg-amber-500/10 text-amber-300 border-amber-500/30">In review</Badge>
+        ) : status === 'rejected' ? (
+          type === 'selfie' ? (
+            <Button size="sm" variant="outline" onClick={() => setShowSelfie(true)} className="bg-red-500/[0.08] border-red-500/30 text-red-300 hover:bg-red-500/15 h-8 text-xs">
+              <RefreshCw className="w-3 h-3 mr-1.5" /> Retry
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" disabled={requesting === type} onClick={() => requestVerify(type)} className="bg-red-500/[0.08] border-red-500/30 text-red-300 hover:bg-red-500/15 h-8 text-xs">
+              <RefreshCw className="w-3 h-3 mr-1.5" /> Retry
+            </Button>
+          )
         ) : type === 'selfie' ? (
           <Button size="sm" variant="outline" onClick={() => setShowSelfie(true)} className="bg-white/5 border-white/10 h-8 text-xs">
             <Camera className="w-3 h-3 mr-1.5" /> Verify
