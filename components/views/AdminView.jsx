@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Textarea } from '@/components/ui/textarea'
 import {
   Crown, AlertTriangle, BadgeCheck, ShieldCheck, Users, Activity,
-  TrendingUp, MessageSquare, Heart, Search, X, CheckCircle2, ImageIcon, Loader2,
+  TrendingUp, MessageSquare, Heart, Search, X, CheckCircle2, ImageIcon, Loader2, Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -18,6 +18,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts'
 import { apiFetch, apiJson, timeAgo } from '@/lib/client/utils'
+import DeleteUserDialog from './DeleteUserDialog'
 
 const CHART_COLORS = ['#00ff88', '#22d3ee', '#a855f7', '#f59e0b', '#ef4444', '#64748b']
 
@@ -137,13 +138,14 @@ function OverviewTab({ stats, analytics }) {
   )
 }
 
-function UsersTab({ refreshSig }) {
+function UsersTab({ refreshSig, onChanged }) {
   const [users, setUsers] = useState([])
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('all')
   const [loading, setLoading] = useState(false)
   const [banDialog, setBanDialog] = useState(null) // user object
   const [banReason, setBanReason] = useState('')
+  const [deleteDialog, setDeleteDialog] = useState(null) // user object
 
   const load = async () => {
     setLoading(true)
@@ -213,8 +215,11 @@ function UsersTab({ refreshSig }) {
                 <Button size="sm" variant="outline" onClick={() => unban(u.id)} className="bg-white/5 border-white/10 h-8 text-xs">Unban</Button>
               </>
             ) : (
-              <Button size="sm" variant="outline" onClick={() => setBanDialog(u)} className="bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 h-8 text-xs">Ban</Button>
+              <Button size="sm" variant="outline" onClick={() => setBanDialog(u)} title="Ban (reversible)" className="bg-amber-500/[0.06] border-amber-500/25 text-amber-200 hover:bg-amber-500/15 hover:border-amber-500/50 h-8 text-xs">Ban</Button>
             )}
+            <Button size="sm" variant="outline" onClick={() => setDeleteDialog({ userId: u.id, name: u.name, email: u.email })} title="Delete permanently" className="bg-red-500/[0.06] border-red-500/25 text-red-300 hover:bg-red-500/15 hover:border-red-500/50 hover:text-red-200 h-8 px-2.5">
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
           </div>
         ))}
       </Card>
@@ -223,21 +228,29 @@ function UsersTab({ refreshSig }) {
         <DialogContent className="bg-[#0a0b0d] border-white/10">
           <DialogHeader><DialogTitle>Ban {banDialog?.name}</DialogTitle></DialogHeader>
           <p className="text-sm text-white/60">This blocks the user from logging back in. They will be notified to contact support.</p>
-          <Textarea value={banReason} onChange={e => setBanReason(e.target.value)} placeholder="Reason (visible internally)…" className="bg-white/5 border-white/10" />
+          <Textarea value={banReason} onChange={e => setBanReason(e.target.value)} placeholder="Reason (visible internally)\u2026" className="bg-white/5 border-white/10" />
           <div className="flex gap-2">
             <Button onClick={() => setBanDialog(null)} variant="outline" className="flex-1 bg-white/5 border-white/10">Cancel</Button>
-            <Button onClick={submitBan} className="flex-1 bg-red-500 hover:bg-red-600 text-white">Confirm Ban</Button>
+            <Button onClick={submitBan} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white">Confirm Ban (reversible)</Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      <DeleteUserDialog
+        open={!!deleteDialog}
+        onOpenChange={(o) => !o && setDeleteDialog(null)}
+        target={deleteDialog}
+        onDeleted={() => { setDeleteDialog(null); load(); onChanged?.() }}
+      />
     </div>
   )
 }
 
-function ReportsTab({ refreshSig }) {
+function ReportsTab({ refreshSig, onChanged }) {
   const [reports, setReports] = useState([])
   const [status, setStatus] = useState('open')
   const [loading, setLoading] = useState(false)
+  const [deleteDialog, setDeleteDialog] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -305,22 +318,33 @@ function ReportsTab({ refreshSig }) {
             {r.status === 'open' && (
               <div className="flex flex-col gap-1.5 items-stretch">
                 <Button size="sm" onClick={() => resolve(r.id, 'no_action')} className="bg-white/5 hover:bg-white/10 border border-white/10 text-white h-8 text-xs">Dismiss</Button>
-                <Button size="sm" onClick={() => banReportedUser(r.targetProfile?.userId)} className="bg-red-500 hover:bg-red-600 text-white h-8 text-xs">Ban user</Button>
+                <Button size="sm" onClick={() => banReportedUser(r.targetProfile?.userId)} title="Ban (reversible)" className="bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-200 h-8 text-xs">Ban user</Button>
                 <Button size="sm" onClick={() => resolve(r.id, 'warn')} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black h-8 text-xs">Warn & resolve</Button>
+                <Button size="sm" onClick={() => setDeleteDialog({ userId: r.targetProfile?.userId, profileId: r.targetProfile?.id, name: r.targetProfile?.name })} title="Delete permanently" className="bg-red-500/[0.06] hover:bg-red-500/15 border border-red-500/30 text-red-300 h-8 text-xs">
+                  <Trash2 className="w-3 h-3 mr-1" /> Delete user
+                </Button>
               </div>
             )}
           </div>
         ))}
       </Card>
+
+      <DeleteUserDialog
+        open={!!deleteDialog}
+        onOpenChange={(o) => !o && setDeleteDialog(null)}
+        target={deleteDialog}
+        onDeleted={() => { setDeleteDialog(null); load(); onChanged?.() }}
+      />
     </div>
   )
 }
 
-function VerificationsTab({ refreshSig }) {
+function VerificationsTab({ refreshSig, onChanged }) {
   const [profiles, setProfiles] = useState([])
   const [type, setType] = useState('all')
   const [loading, setLoading] = useState(false)
   const [previewSelfie, setPreviewSelfie] = useState(null)
+  const [deleteDialog, setDeleteDialog] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -366,9 +390,12 @@ function VerificationsTab({ refreshSig }) {
           {types.map(t => (
             <div key={t} className="flex gap-1">
               <Button size="sm" onClick={() => approve(p.id, t)} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black h-8 text-xs flex-1"><CheckCircle2 className="w-3.5 h-3.5 mr-1" />Approve {t}</Button>
-              <Button size="sm" onClick={() => reject(p.id, t)} variant="outline" className="bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 h-8 text-xs"><X className="w-3.5 h-3.5" /></Button>
+              <Button size="sm" onClick={() => reject(p.id, t)} variant="outline" className="bg-white/5 border-white/10 hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-300 h-8 text-xs"><X className="w-3.5 h-3.5" /></Button>
             </div>
           ))}
+          <Button size="sm" onClick={() => setDeleteDialog({ userId: p.userId, profileId: p.id, name: p.name })} title="Delete permanently" className="bg-red-500/[0.06] hover:bg-red-500/15 border border-red-500/30 text-red-300 h-8 text-xs">
+            <Trash2 className="w-3 h-3 mr-1" /> Delete user
+          </Button>
         </div>
       </div>
     )
@@ -404,6 +431,13 @@ function VerificationsTab({ refreshSig }) {
           {previewSelfie && <img src={previewSelfie} alt="selfie" className="w-full rounded-2xl" />}
         </DialogContent>
       </Dialog>
+
+      <DeleteUserDialog
+        open={!!deleteDialog}
+        onOpenChange={(o) => !o && setDeleteDialog(null)}
+        target={deleteDialog}
+        onDeleted={() => { setDeleteDialog(null); load(); onChanged?.() }}
+      />
     </div>
   )
 }
@@ -465,9 +499,9 @@ export default function AdminView() {
           <TabsTrigger value="users">Users</TabsTrigger>
         </TabsList>
         <TabsContent value="overview"><OverviewTab stats={stats} analytics={analytics} /></TabsContent>
-        <TabsContent value="reports"><ReportsTab refreshSig={refreshSig} /></TabsContent>
-        <TabsContent value="verifications"><VerificationsTab refreshSig={refreshSig} /></TabsContent>
-        <TabsContent value="users"><UsersTab refreshSig={refreshSig} /></TabsContent>
+        <TabsContent value="reports"><ReportsTab refreshSig={refreshSig} onChanged={refresh} /></TabsContent>
+        <TabsContent value="verifications"><VerificationsTab refreshSig={refreshSig} onChanged={refresh} /></TabsContent>
+        <TabsContent value="users"><UsersTab refreshSig={refreshSig} onChanged={refresh} /></TabsContent>
       </Tabs>
     </div>
   )
