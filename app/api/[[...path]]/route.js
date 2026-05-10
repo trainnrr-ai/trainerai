@@ -430,7 +430,7 @@ async function handler(request, { params }) {
       // Spam: rate limit — max 30 msgs in last 10 min
       const since = new Date(Date.now() - 10 * 60 * 1000)
       const recent = await db.collection('messages').countDocuments({ fromUserId: user.id, createdAt: { $gte: since } })
-      if (recent > 30) return NextResponse.json({ error: 'Slow down — too many messages' }, { status: 429 })
+      if (recent >= 30) return NextResponse.json({ error: 'Slow down — too many messages' }, { status: 429 })
       const flagged = BANNED_WORDS.some(w => text.toLowerCase().includes(w))
       const msg = { id: uuidv4(), matchId, fromUserId: user.id, text: text.trim(), flagged, readBy: [user.id], createdAt: new Date() }
       await db.collection('messages').insertOne(msg)
