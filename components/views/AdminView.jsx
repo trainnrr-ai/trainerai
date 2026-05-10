@@ -290,9 +290,14 @@ function ReportsTab({ refreshSig }) {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium">{r.targetProfile?.name || 'Unknown profile'}</span>
                 {r.targetProfile?.verified && <BadgeCheck className="w-3.5 h-3.5 text-sky-400" />}
+                {r.category && (
+                  <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-red-500/10 text-red-300 border border-red-500/30">
+                    {String(r.category).replace(/_/g, ' ')}
+                  </span>
+                )}
                 <Badge variant="outline" className={r.status === 'open' ? 'bg-amber-500/10 text-amber-300 border-amber-500/30' : 'bg-white/5 text-white/50 border-white/10'}>{r.status}</Badge>
               </div>
-              <div className="text-white/60 text-xs mt-1 leading-relaxed">“{r.reason || 'No reason given'}”</div>
+              <div className="text-white/60 text-xs mt-1 leading-relaxed">{r.details ? `\u201c${r.details}\u201d` : (r.reason || 'No additional details')}</div>
               <div className="text-[10px] text-white/35 mt-1.5">
                 Reported by {r.reporter?.name || r.reporter?.email || 'unknown'} · {timeAgo(r.createdAt)}
               </div>

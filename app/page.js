@@ -22,7 +22,7 @@ import {
 
 // Shared constants & utilities
 import { LOGO, INSTAGRAM_URL, GOALS, TIMINGS, LEVELS, GENDERS, CITIES } from '@/lib/client/constants'
-import { loginWithGoogle, compressImage } from '@/lib/client/utils'
+import { loginWithGoogle, compressImage, formatLastActive } from '@/lib/client/utils'
 
 // Reusable components
 import SmartImg from '@/components/app/SmartImg'
@@ -37,6 +37,10 @@ import ContactView from '@/components/views/ContactView'
 import SelfieVerifyDialog from '@/components/views/SelfieVerifyDialog'
 import AdminView from '@/components/views/AdminView'
 import PremiumDialog from '@/components/views/PremiumDialog'
+import ReportDialog from '@/components/views/ReportDialog'
+
+// Premium UI is hidden by default — flip NEXT_PUBLIC_PREMIUM_ENABLED=true to expose Pro CTA + Settings card.
+const PREMIUM_ENABLED = process.env.NEXT_PUBLIC_PREMIUM_ENABLED === 'true'
 
 function Navbar({ user, view, setView, onOpenPremium }) {
   return (
@@ -53,7 +57,7 @@ function Navbar({ user, view, setView, onOpenPremium }) {
             <button onClick={() => setView('discover')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'discover' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Discover</button>
             <button onClick={() => setView('matches')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'matches' || view === 'chat' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Connections</button>
             <NotificationBell onNavigate={setView} />
-            {user.tier !== 'pro' && (
+            {user.tier !== 'pro' && PREMIUM_ENABLED && (
               <button onClick={onOpenPremium} title="Trainr Pro" className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-amber-400/10 hover:bg-amber-400/15 border border-amber-400/30 text-amber-300 text-xs font-bold transition">
                 <Crown className="w-3.5 h-3.5" /> Pro
               </button>
@@ -393,6 +397,7 @@ function ChoiceGrid({ options, value, onChange, icon: Icon, large }) {
 function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = profile.photos || []
+  const active = formatLastActive(profile.lastActiveAt)
   return (
     <div className="snap-start min-h-[calc(100vh-4rem)] flex items-center py-3 md:py-6 fade-up" style={{ animationDelay: `${Math.min(index * 0.05, 0.3)}s` }}>
       <Card className="glass-strong border-white/10 overflow-hidden w-full max-w-md mx-auto rounded-3xl shadow-2xl shadow-black/30 hover:border-white/15 transition-colors">
@@ -410,13 +415,22 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
           <button onClick={() => setPhotoIdx(i => Math.max(0, i-1))} className="absolute left-0 top-0 w-1/3 h-full z-[5]" aria-label="Previous photo" />
           <button onClick={() => setPhotoIdx(i => Math.min(photos.length-1, i+1))} className="absolute right-0 top-0 w-1/3 h-full z-[5]" aria-label="Next photo" />
 
-          {profile.online && (
+          {(active.online || active.text) && (
             <div className="absolute top-5 right-3 z-10 glass rounded-full px-2.5 py-[5px] flex items-center gap-1.5 border-white/15">
-              <span className="relative flex w-1.5 h-1.5">
-                <span className="absolute inset-0 rounded-full bg-[#00ff88] animate-ping opacity-70" />
-                <span className="relative rounded-full w-1.5 h-1.5 bg-[#00ff88]" />
-              </span>
-              <span className="text-[11px] font-semibold tracking-wide">Online</span>
+              {active.online ? (
+                <>
+                  <span className="relative flex w-1.5 h-1.5">
+                    <span className="absolute inset-0 rounded-full bg-[#00ff88] animate-ping opacity-70" />
+                    <span className="relative rounded-full w-1.5 h-1.5 bg-[#00ff88]" />
+                  </span>
+                  <span className="text-[11px] font-semibold tracking-wide">Online</span>
+                </>
+              ) : (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
+                  <span className="text-[11px] font-medium tracking-wide text-white/70">{active.text}</span>
+                </>
+              )}
             </div>
           )}
 
@@ -547,7 +561,6 @@ function Discover() {
   const [filters, setFilters] = useState({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, recentlyActive: false, maxDistance: 0 })
   const [profiles, setProfiles] = useState(null)
   const [reportProfile, setReportProfile] = useState(null)
-  const [reportReason, setReportReason] = useState('')
   const [showLocPrompt, setShowLocPrompt] = useState(false)
 
   useEffect(() => {
@@ -605,15 +618,8 @@ function Discover() {
     try { await fetch('/api/profiles/skip', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: p.id }) }) } catch {}
   }
 
-  const submitReport = async () => {
-    if (!reportReason.trim()) return
-    try {
-      await fetch('/api/reports', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: reportProfile.id, reason: reportReason }) })
-      await fetch('/api/blocks', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: reportProfile.id }) })
-      toast.success('Report submitted. User blocked.')
-      setProfiles(prev => (prev || []).filter(x => x.id !== reportProfile.id))
-      setReportProfile(null); setReportReason('')
-    } catch { toast.error('Failed to report') }
+  const submitReport = (p) => {
+    setProfiles(prev => (prev || []).filter(x => x.id !== p.id))
   }
 
   return (
@@ -666,28 +672,48 @@ function Discover() {
           </div>
         )}
         {profiles && profiles.length === 0 && (
-          <div className="text-center py-24">
-            <div className="w-20 h-20 rounded-full bg-[#00ff88]/10 flex items-center justify-center mx-auto mb-4">
-              <Users className="w-10 h-10 text-[#00ff88]" />
-            </div>
-            <h3 className="text-xl font-bold">No more partners right now</h3>
-            <p className="text-white/60 mt-1 text-sm">Try changing your filters or check back soon.</p>
-            <Button onClick={() => load({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, recentlyActive: false, maxDistance: 0 })} variant="outline" className="mt-5 bg-white/5 border-white/10">Reset filters</Button>
-          </div>
+          <EmptyDiscover onResetFilters={() => load({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, recentlyActive: false, maxDistance: 0 })} />
         )}
         {profiles?.map(p => (
           <ProfileCard key={p.id} profile={p} onLike={handleLike} onSkip={handleSkip} onReport={setReportProfile} />
         ))}
       </div>
 
-      <Dialog open={!!reportProfile} onOpenChange={(o) => !o && setReportProfile(null)}>
-        <DialogContent className="bg-[#0a0b0d] border-white/10">
-          <DialogHeader><DialogTitle>Report {reportProfile?.name}</DialogTitle></DialogHeader>
-          <p className="text-sm text-white/60">Help us keep Trainr safe. They will also be blocked.</p>
-          <Textarea value={reportReason} onChange={e => setReportReason(e.target.value)} placeholder="Reason (e.g. inappropriate messages, fake profile, harassment)..." className="bg-white/5 border-white/10" />
-          <Button onClick={submitReport} className="bg-red-500 hover:bg-red-600 text-white">Submit Report & Block</Button>
-        </DialogContent>
-      </Dialog>
+      <ReportDialog
+        open={!!reportProfile}
+        onOpenChange={(o) => !o && setReportProfile(null)}
+        profile={reportProfile}
+        onDone={submitReport}
+      />
+    </div>
+  )
+}
+
+function EmptyDiscover({ onResetFilters }) {
+  const inviteFriends = () => {
+    const url = 'https://trainr.in'
+    const msg = `Hey! I just joined Trainr — it's a fitness accountability network where you find verified workout partners at your gym. Check it out: ${url}`
+    if (navigator.share) {
+      navigator.share({ title: 'Trainr', text: msg, url }).catch(() => {})
+    } else {
+      navigator.clipboard?.writeText(msg)
+      toast.success('Invite copied!', { description: 'Paste it in WhatsApp / iMessage / Insta.' })
+    }
+  }
+  return (
+    <div className="text-center py-20 fade-up max-w-sm mx-auto">
+      <div className="w-20 h-20 rounded-3xl bg-[#00ff88]/10 border border-[#00ff88]/20 flex items-center justify-center mx-auto mb-5 text-4xl">💪</div>
+      <h3 className="text-2xl font-extrabold tracking-tight">No workout partners nearby yet</h3>
+      <p className="text-white/60 mt-2 text-sm leading-relaxed">Be the first athlete in your area. Invite a gym buddy to join and the feed comes alive.</p>
+      <div className="flex flex-col gap-2 mt-6">
+        <Button onClick={inviteFriends} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full h-11">
+          <Send className="w-4 h-4 mr-2" /> Invite Friends
+        </Button>
+        <Button onClick={onResetFilters} variant="outline" className="bg-white/5 border-white/10 rounded-full h-11">
+          <Filter className="w-4 h-4 mr-2" /> Edit Filters
+        </Button>
+      </div>
+      <p className="text-[11px] text-white/35 mt-6">We never DM your contacts. We just give you a link to share.</p>
     </div>
   )
 }
@@ -747,10 +773,13 @@ function Matches({ onOpenChat }) {
   )
 }
 
-function Chat({ match, currentUserId, onBack }) {
+function Chat({ match, currentUserId, onBack, onChatRemoved }) {
   const [messages, setMessages] = useState([])
   const [otherTyping, setOtherTyping] = useState(false)
   const [text, setText] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [confirmBlock, setConfirmBlock] = useState(false)
   const scrollerRef = useRef(null)
   const typingTimerRef = useRef(null)
 
@@ -792,9 +821,18 @@ function Chat({ match, currentUserId, onBack }) {
     } catch { toast.error('Failed to send') }
   }
 
+  const blockUser = async () => {
+    try {
+      await fetch('/api/blocks', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: match.otherProfile?.id }) })
+      toast.success(`${match.otherProfile?.name || 'User'} blocked`, { description: 'Chat removed. They can\u2019t contact you.' })
+      onChatRemoved?.()
+    } catch { toast.error('Could not block') }
+  }
+
   const myLastMsg = [...messages].reverse().find(m => m.fromUserId === currentUserId)
   const otherUserId = match.userA === currentUserId ? match.userB : match.userA
   const myLastSeen = myLastMsg && Array.isArray(myLastMsg.readBy) && myLastMsg.readBy.includes(otherUserId)
+  const otherActive = formatLastActive(match.otherProfile?.lastActiveAt)
 
   return (
     <div className="pt-16 h-screen flex flex-col">
@@ -805,9 +843,45 @@ function Chat({ match, currentUserId, onBack }) {
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-sm flex items-center gap-1.5 truncate">{match.otherProfile?.name} <VerificationBadge verified={match.otherProfile?.verified} /></div>
             <div className="text-xs text-white/50">
-              {otherTyping ? <span className="text-[#00ff88]">typing…</span> : (match.otherProfile?.online ? 'Online now' : 'Offline')}
+              {otherTyping ? <span className="text-[#00ff88]">typing…</span> : (otherActive.online ? <span className="text-[#00ff88]">Online now</span> : (otherActive.text || 'Offline'))}
             </div>
           </div>
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger asChild>
+              <button className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition" title="Options">
+                <span className="flex flex-col gap-0.5">
+                  <span className="w-1 h-1 rounded-full bg-white/70" />
+                  <span className="w-1 h-1 rounded-full bg-white/70" />
+                  <span className="w-1 h-1 rounded-full bg-white/70" />
+                </span>
+              </button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="bg-[#0a0b0d] border-white/10 rounded-t-3xl max-h-[60vh]">
+              <SheetHeader><SheetTitle>Options</SheetTitle></SheetHeader>
+              <div className="space-y-2 mt-4 max-w-md mx-auto">
+                <button
+                  onClick={() => { setMenuOpen(false); setReportOpen(true) }}
+                  className="w-full flex items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.07] transition text-left"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center"><AlertTriangle className="w-4 h-4 text-amber-300" /></div>
+                  <div>
+                    <div className="text-sm font-semibold">Report user</div>
+                    <div className="text-xs text-white/55">Categorise the issue. We review within 24h.</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); setConfirmBlock(true) }}
+                  className="w-full flex items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-red-500/10 hover:border-red-500/30 transition text-left"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-red-500/15 border border-red-500/30 flex items-center justify-center"><Lock className="w-4 h-4 text-red-300" /></div>
+                  <div>
+                    <div className="text-sm font-semibold">Block user</div>
+                    <div className="text-xs text-white/55">Removes chat. They can\u2019t see or contact you.</div>
+                  </div>
+                </button>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
       <div ref={scrollerRef} className="flex-1 overflow-y-auto">
@@ -857,20 +931,47 @@ function Chat({ match, currentUserId, onBack }) {
           <Button onClick={send} disabled={!text.trim()} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black rounded-full disabled:opacity-50" size="icon"><Send className="w-4 h-4" /></Button>
         </div>
       </div>
+
+      <Dialog open={confirmBlock} onOpenChange={setConfirmBlock}>
+        <DialogContent className="bg-[#0a0b0d] border-white/10 max-w-sm">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Lock className="w-5 h-5 text-red-400" /> Block {match.otherProfile?.name}?</DialogTitle></DialogHeader>
+          <p className="text-sm text-white/65 leading-relaxed">This will <strong className="text-white">delete this conversation</strong> and prevent future contact. You both disappear from each other\u2019s feeds.</p>
+          <div className="flex gap-2 mt-2">
+            <Button onClick={() => setConfirmBlock(false)} variant="outline" className="flex-1 bg-white/5 border-white/10">Cancel</Button>
+            <Button onClick={async () => { await blockUser(); setConfirmBlock(false) }} className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold">Block</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        profile={match.otherProfile}
+        onDone={() => onChatRemoved?.()}
+      />
     </div>
   )
 }
 
-function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated, onOpenPremium }) {
+function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated, onOpenPremium, onAccountDeleted }) {
   const [showSelfie, setShowSelfie] = useState(false)
   const [requesting, setRequesting] = useState(null)
   const [pushState, setPushState] = useState('idle') // idle | enabled | denied | unsupported
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [completion, setCompletion] = useState(null)
 
   useEffect(() => {
     if (typeof Notification === 'undefined') { setPushState('unsupported'); return }
     if (Notification.permission === 'granted') setPushState('enabled')
     else if (Notification.permission === 'denied') setPushState('denied')
   }, [])
+
+  useEffect(() => {
+    fetch('/api/profile/completion', { credentials: 'include' })
+      .then(r => r.json()).then(d => setCompletion(d.completion || null))
+      .catch(() => {})
+  }, [profile])
 
   const enablePush = async () => {
     try {
@@ -902,6 +1003,16 @@ function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated
       else toast.success(`${type === 'gym' ? 'Gym' : 'Instagram'} verification approved`)
       onProfileUpdated?.(data.profile)
     } catch (e) { toast.error(e.message) } finally { setRequesting(null) }
+  }
+
+  const deleteAccount = async () => {
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/account', { method: 'DELETE', credentials: 'include' })
+      if (!res.ok) throw new Error('Delete failed')
+      toast.success('Account deleted', { description: 'All your data was removed.' })
+      onAccountDeleted?.()
+    } catch (e) { toast.error(e.message); setDeleting(false) }
   }
 
   const VerifyRow = ({ type, label, icon: Ic }) => {
@@ -940,21 +1051,51 @@ function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated
           <Button onClick={onEditProfile} variant="outline" className="bg-white/5 border-white/10">Edit</Button>
         </Card>
 
-        {/* Premium card */}
-        <Card className="glass border-white/10 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center">
-              <Crown className="w-5 h-5 text-amber-300" />
+        {/* Profile completion progress */}
+        {completion && !completion.complete && (
+          <Card className="glass border-[#00ff88]/20 p-5 bg-gradient-to-br from-[#00ff88]/[0.04] to-transparent">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-sm font-bold text-white">Your profile is {completion.score}% complete</div>
+                <div className="text-xs text-white/55 mt-0.5">Finish to be visible in Discover.</div>
+              </div>
+              <div className="text-2xl font-black text-[#00ff88]">{completion.score}%</div>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold flex items-center gap-2">Trainr Pro {user.tier === 'pro' && <Badge className="bg-amber-400/15 text-amber-300 border-amber-400/30">Active</Badge>}</div>
-              <div className="text-xs text-white/55">Unlimited connections, advanced filters, priority placement</div>
+            <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-[#00ff88] to-[#00cc6a] transition-all duration-500" style={{ width: `${completion.score}%` }} />
             </div>
-            <Button onClick={onOpenPremium} className="bg-amber-400 hover:bg-amber-500 text-black font-semibold">
-              {user.tier === 'pro' ? 'Manage' : 'Upgrade'}
+            {completion.missing?.length > 0 && (
+              <div className="mt-3 space-y-1">
+                {completion.missing.slice(0, 4).map(m => (
+                  <div key={m.key} className="text-xs text-white/65 flex items-center gap-2">
+                    <span className="w-1 h-1 rounded-full bg-[#00ff88]" /> {m.label}
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button onClick={onEditProfile} className="mt-4 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold w-full h-10">
+              Complete profile
             </Button>
-          </div>
-        </Card>
+          </Card>
+        )}
+
+        {/* Premium card — hidden behind env flag for real-user beta */}
+        {PREMIUM_ENABLED && (
+          <Card className="glass border-white/10 p-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-400/15 border border-amber-400/30 flex items-center justify-center">
+                <Crown className="w-5 h-5 text-amber-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold flex items-center gap-2">Trainr Pro {user.tier === 'pro' && <Badge className="bg-amber-400/15 text-amber-300 border-amber-400/30">Active</Badge>}</div>
+                <div className="text-xs text-white/55">Unlimited connections, advanced filters, priority placement</div>
+              </div>
+              <Button onClick={onOpenPremium} className="bg-amber-400 hover:bg-amber-500 text-black font-semibold">
+                {user.tier === 'pro' ? 'Manage' : 'Upgrade'}
+              </Button>
+            </div>
+          </Card>
+        )}
 
         <Card className="glass border-white/10 p-5">
           <div className="flex items-center justify-between mb-3">
@@ -993,11 +1134,49 @@ function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated
           </div>
         </Card>
 
-        <button onClick={onLogout} className="w-full glass rounded-2xl p-5 flex items-center gap-3 hover:bg-red-500/10 transition text-red-400">
+        <button onClick={onLogout} className="w-full glass rounded-2xl p-5 flex items-center gap-3 hover:bg-white/[0.07] transition text-white/85">
           <LogOut className="w-5 h-5" /> <span className="font-semibold">Log out</span>
         </button>
+
+        {/* Danger zone */}
+        <div className="pt-2">
+          <div className="text-[10px] uppercase tracking-wider text-red-400/70 font-bold mb-2 px-1">Danger zone</div>
+          <button onClick={() => setConfirmDelete(true)} className="w-full rounded-2xl p-5 flex items-center gap-3 bg-red-500/[0.04] border border-red-500/25 hover:bg-red-500/10 hover:border-red-500/40 transition text-red-300 active:scale-[0.99]">
+            <AlertTriangle className="w-5 h-5" />
+            <div className="flex-1 text-left">
+              <div className="font-semibold">Delete account</div>
+              <div className="text-xs text-red-300/65">Permanently delete your profile, photos and chats.</div>
+            </div>
+          </button>
+        </div>
       </div>
+
       <SelfieVerifyDialog open={showSelfie} onOpenChange={setShowSelfie} onVerified={(p) => onProfileUpdated?.(p)} />
+
+      {/* Delete account confirmation */}
+      <Dialog open={confirmDelete} onOpenChange={(o) => !deleting && setConfirmDelete(o)}>
+        <DialogContent className="bg-[#0a0b0d] border-red-500/30 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-300"><AlertTriangle className="w-5 h-5" /> Delete account?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-white/75 leading-relaxed">
+            This will <strong className="text-white">permanently delete</strong>:
+          </p>
+          <ul className="text-xs text-white/65 space-y-1.5 pl-1">
+            <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-red-400" /> Your profile and all uploaded photos</li>
+            <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-red-400" /> Your matches, chats and messages</li>
+            <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-red-400" /> Your notifications and verification state</li>
+            <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-red-400" /> Your account and active sessions</li>
+          </ul>
+          <p className="text-xs text-red-300 font-semibold">This action cannot be undone.</p>
+          <div className="flex gap-2 mt-1">
+            <Button onClick={() => setConfirmDelete(false)} disabled={deleting} variant="outline" className="flex-1 bg-white/5 border-white/10">Cancel</Button>
+            <Button onClick={deleteAccount} disabled={deleting} className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold">
+              {deleting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Deleting…</> : 'Yes, delete'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1063,6 +1242,8 @@ function App() {
 
   const handleProfileSaved = (p) => { setProfile(p); setView('discover') }
   const handlePremiumUpgraded = (data) => { setUser(u => u ? { ...u, tier: data.tier } : u) }
+  const handleAccountDeleted = () => { setUser(null); setProfile(null); setActiveChat(null); setView('landing') }
+  const handleChatRemoved = () => { setActiveChat(null); setView('matches') }
 
   if (loading) {
     return (
@@ -1090,11 +1271,11 @@ function App() {
       {user && view === 'profile-edit' && <ProfileEditor user={user} profile={profile} onSaved={handleProfileSaved} />}
       {user && view === 'discover' && (profile ? <Discover /> : <ProfileEditor user={user} profile={null} onSaved={handleProfileSaved} />)}
       {user && view === 'matches' && <Matches onOpenChat={(m) => { setActiveChat(m); setView('chat') }} />}
-      {user && view === 'chat' && activeChat && <Chat match={activeChat} currentUserId={user.id} onBack={() => { setActiveChat(null); setView('matches') }} />}
-      {user && view === 'settings' && <SettingsView user={user} profile={profile} onEditProfile={() => setView('profile-edit')} onLogout={handleLogout} onProfileUpdated={(p) => setProfile(p)} onOpenPremium={() => setShowPremium(true)} />}
+      {user && view === 'chat' && activeChat && <Chat match={activeChat} currentUserId={user.id} onBack={() => { setActiveChat(null); setView('matches') }} onChatRemoved={handleChatRemoved} />}
+      {user && view === 'settings' && <SettingsView user={user} profile={profile} onEditProfile={() => setView('profile-edit')} onLogout={handleLogout} onProfileUpdated={(p) => setProfile(p)} onOpenPremium={() => setShowPremium(true)} onAccountDeleted={handleAccountDeleted} />}
       {user && view === 'admin' && (user.isAdmin ? <AdminView /> : <ForbiddenView onBack={() => setView('discover')} />)}
 
-      {user && <PremiumDialog open={showPremium} onOpenChange={setShowPremium} onUpgraded={handlePremiumUpgraded} />}
+      {user && PREMIUM_ENABLED && <PremiumDialog open={showPremium} onOpenChange={setShowPremium} onUpgraded={handlePremiumUpgraded} />}
     </div>
   )
 }
