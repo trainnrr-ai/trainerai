@@ -35,6 +35,14 @@ function applySecurityHeaders(res) {
   return res
 }
 
+// Force no-cache on all API responses so browsers/CDNs never serve stale profile data.
+function applyApiNoCache(res) {
+  res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+  res.headers.set('Pragma', 'no-cache')
+  res.headers.set('Expires', '0')
+  return res
+}
+
 export function middleware(request) {
   const { pathname } = request.nextUrl
 
@@ -62,7 +70,9 @@ export function middleware(request) {
     // Pass through — actual admin verification happens in adminGuard()
   }
 
-  return applySecurityHeaders(NextResponse.next())
+  const res = applySecurityHeaders(NextResponse.next())
+  if (pathname.startsWith('/api/')) applyApiNoCache(res)
+  return res
 }
 
 // Run on all paths except Next internals + static assets
