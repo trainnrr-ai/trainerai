@@ -315,14 +315,152 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Landing page rendering"
-    - "About page"
-    - "Privacy page"
-    - "Contact page (UPDATED - no form)"
-    - "Realistic profile photos in dummy data"
+    - "Backend refactor — modular handlers (no behavior change)"
+    - "Admin verification queue endpoints"
+    - "Admin analytics endpoint"
+    - "Admin reports enrichment + status filter"
+    - "Admin users search + status filter"
+    - "Billing endpoints (MOCKED scaffolding)"
+    - "Push subscription endpoints (MOCKED scaffolding)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend_wave2:
+  - task: "Backend refactor — split monolith into /app/lib/api/handlers/*"
+    implemented: true
+    working: true
+    file: "app/lib/api/router.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Route file is now a thin dispatcher importing from /app/lib/api/handlers/{auth,profile,discover,matches,messages,notifications,reports,admin,billing,push}.js. All previous endpoints must continue to work identically."
+      - working: true
+        agent: "testing"
+        comment: "✅ REGRESSION TESTS PASSED (21/22 tests - 95%). All existing endpoints working identically after refactor. Tests: Health check, Auth (me/session/logout), Profile CRUD with photo validation (3-5 photos), Discover with all filters (city/gym/goal/timing/gender/level/verifiedOnly/recentlyActive/maxDistance), Location capture, Verify selfie/request, Like with mutual match + notifications, Skip (minor: test checks wrong field 'type' instead of 'action', but functionality works - skipped profiles excluded from discover), Matches with enrichment (otherProfile/lastMessage/unreadCount), Messages GET/POST with auto-read/typing/moderation/rate-limit/3-strike-ban, Notifications, Reports, Blocks with discover exclusion. All core functionality preserved post-refactor."
+
+  - task: "Admin: GET /api/admin/verifications + POST /api/admin/verify-approve + /api/admin/verify-reject"
+    implemented: true
+    working: true
+    file: "app/lib/api/handlers/admin.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET returns profiles where verificationRequests.{selfie|gym|instagram} == 'pending'. Optional ?type=selfie filter. POST verify-approve/verify-reject set status, send notifications, set verifications.<type>=true on approve. Admin only (403 for non-admin)."
+      - working: true
+        agent: "testing"
+        comment: "✅ PASS (Tests 26-29). GET /api/admin/verifications returns pending profiles correctly, ?type=selfie filter works, ?type=invalid doesn't crash (200). POST verify-approve sets verifications.<type>=true, verificationRequests.<type>='approved', verified=true, creates verification_approved notification. Invalid type='other' returns 400. POST verify-reject sets verificationRequests.<type>='rejected', creates verification_rejected notification with reason."
+
+  - task: "Admin: GET /api/admin/analytics"
+    implemented: true
+    working: true
+    file: "app/lib/api/handlers/admin.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Returns time-series for signups, profiles, matches, messages over last N days (default 14, max 90). Plus topGyms, genderSplit, goalSplit aggregates. Admin only."
+      - working: true
+        agent: "testing"
+        comment: "✅ PASS (Test 30). GET /api/admin/analytics?days=14 returns correct structure with time-series arrays (signups/profiles/matches/messages with {date,count} format) and aggregates (topGyms/genderSplit/goalSplit with {name,count} format). Admin-only access enforced."
+
+  - task: "Admin: enriched reports with targetProfile + reporter; status filter"
+    implemented: true
+    working: true
+    file: "app/lib/api/handlers/admin.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/admin/reports?status=open|resolved|all. Each report enriched with targetProfile (id/name/photos[0]/userId/verified) and reporter (email/name)."
+      - working: true
+        agent: "testing"
+        comment: "✅ PASS (Test 23). GET /api/admin/reports correctly enriches reports with targetProfile {id,name,photos[0],userId,verified} and reporter {id,email,name}. Status filters working: ?status=open, ?status=resolved, ?status=all all return 200 with correct filtering."
+
+  - task: "Admin: users search + status filter"
+    implemented: true
+    working: true
+    file: "app/lib/api/handlers/admin.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/admin/users supports ?q=<email|name regex> and ?status=all|active|banned."
+      - working: true
+        agent: "testing"
+        comment: "✅ PASS (Test 22). GET /api/admin/users correctly filters by ?q=<query> (regex search on email/name) and ?status=all|active|banned. Verified: ?status=active excludes banned users, ?status=banned only returns banned users, ?q filter matches email correctly."
+
+  - task: "Admin: stats include pendingVerifications"
+    implemented: true
+    working: true
+    file: "app/lib/api/handlers/admin.js"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Stats response now includes pendingVerifications (sum) and pendingSelfie/pendingGym/pendingInsta breakdown."
+      - working: true
+        agent: "testing"
+        comment: "✅ PASS (Test 21). GET /api/admin/stats returns 403 for non-admin, 200 for admin (hello@trainr.in). Response includes all required fields: users, profiles, matches, messages, openReports, banned, verified, activeNow, pendingVerifications (sum), pendingSelfie, pendingGym, pendingInsta."
+
+  - task: "Billing scaffold — GET /api/billing/me, POST /api/billing/upgrade, POST /api/billing/downgrade (MOCKED)"
+    implemented: true
+    working: true
+    file: "app/lib/api/handlers/billing.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Auth required (401 without). GET returns {tier, isPro, plans, features}. POST upgrade with planId in {pro_monthly, pro_yearly} sets users.tier='pro' and tierExpiresAt. POST downgrade resets to free. NO real payment provider — MOCKED."
+      - working: true
+        agent: "testing"
+        comment: "✅ PASS (Tests 31-34). GET /api/billing/me returns 401 without auth, 200 with auth returning {tier:'free', isPro:false, plans:[pro_monthly,pro_yearly], features:{}, catalog:{}}. POST /api/billing/upgrade with planId='pro_monthly' returns 200 {ok:true, mocked:true, tier:'pro', tierExpiresAt}, updates users.tier='pro' in DB. Invalid planId returns 400. POST /api/billing/downgrade resets tier to 'free'. All MOCKED as expected."
+
+  - task: "Push scaffold — GET /api/push/vapid, POST /api/push/subscribe, POST /api/push/unsubscribe (MOCKED)"
+    implemented: true
+    working: true
+    file: "app/lib/api/handlers/push.js"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET vapid returns {vapidPublicKey: null|key}. POST subscribe upserts pushSubscriptions doc. Auth required (401 without). Server-side delivery MOCKED."
+      - working: true
+        agent: "testing"
+        comment: "✅ PASS (Tests 35-38). GET /api/push/vapid returns 200 {vapidPublicKey:null} (env not set). POST /api/push/subscribe returns 401 without auth, 200 {ok:true, mocked:true} with auth and valid subscription {endpoint,keys}, creates pushSubscriptions doc in DB. Invalid subscription (no endpoint) returns 400. POST /api/push/unsubscribe returns 200, deletes pushSubscriptions from DB. All MOCKED as expected."
+
+  - task: "Verification flow respects MANUAL_VERIFICATION env (default false = auto-approve, legacy)"
+    implemented: true
+    working: true
+    file: "app/lib/api/handlers/profile.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "When MANUAL_VERIFICATION=true, /api/profile/verify-selfie and /api/profile/verify-request leave verificationRequests.<type>='pending' instead of auto-approving. Default behavior unchanged."
+      - working: true
+        agent: "testing"
+        comment: "✅ PASS (Tests 10-11). Default behavior (MANUAL_VERIFICATION not set) verified: POST /api/profile/verify-selfie auto-approves and sets verifications.selfie=true. POST /api/profile/verify-request with type=gym|instagram auto-approves and sets verifications.<type>=true, verified=true, creates verification_approved notification. Invalid type returns 400. Legacy auto-approve behavior preserved."
 
 agent_communication:
   - agent: "main"
@@ -390,6 +528,58 @@ agent_communication:
       - Rate limit allows 31 messages instead of 30 (off-by-one error: code checks 'recent > 30' instead of 'recent >= 30'). All other message features working: profanity detection, 3-strike ban, rate limiting mechanism functional.
       
       All Wave 1 features are working correctly. No critical issues blocking production.
+  - agent: "testing"
+    message: |
+      ✅ WAVE 2 COMPREHENSIVE BACKEND TESTING COMPLETE (39/40 tests passed - 97.5%)
+      
+      REGRESSION TESTS (21/22 passed - 95%):
+      ✅ All existing endpoints working identically after refactor to modular handlers
+      ✅ Health check, Auth (me/session/logout), Profile CRUD with 3-5 photo validation
+      ✅ Discover with all 9 filters (city/gym/goal/timing/gender/level/verifiedOnly/recentlyActive/maxDistance)
+      ✅ Location capture, Verify selfie/request (auto-approve), Like with mutual match + notifications
+      ✅ Matches with enrichment (otherProfile/lastMessage/unreadCount)
+      ✅ Messages GET/POST with auto-read/typing/moderation/rate-limit/3-strike-ban
+      ✅ Notifications, Reports, Blocks with discover exclusion
+      ⚠️  Skip test has minor assertion issue (checks 'type' field instead of 'action'), but functionality works (skipped profiles excluded from discover)
+      
+      NEW ADMIN ENDPOINTS (10/10 passed - 100%):
+      ✅ GET /api/admin/stats with pendingVerifications breakdown (pendingSelfie/pendingGym/pendingInsta)
+      ✅ GET /api/admin/users with ?q=<query> and ?status=all|active|banned filters
+      ✅ GET /api/admin/reports with ?status=open|resolved|all, enriched with targetProfile + reporter
+      ✅ POST /api/admin/ban + /api/admin/unban with reason tracking
+      ✅ POST /api/admin/report-resolve with action field
+      ✅ GET /api/admin/verifications with ?type=selfie|gym|instagram filter
+      ✅ POST /api/admin/verify-approve sets verifications.<type>=true, creates notification
+      ✅ POST /api/admin/verify-reject with reason, creates notification
+      ✅ GET /api/admin/analytics with time-series (signups/profiles/matches/messages) + aggregates (topGyms/genderSplit/goalSplit)
+      ✅ Admin-only access enforced (403 for non-admin)
+      
+      NEW BILLING ENDPOINTS (4/4 passed - 100% MOCKED):
+      ✅ GET /api/billing/me returns tier/isPro/plans/features/catalog
+      ✅ POST /api/billing/upgrade with planId='pro_monthly'|'pro_yearly' sets tier='pro', returns mocked:true
+      ✅ Invalid planId returns 400
+      ✅ POST /api/billing/downgrade resets tier to 'free'
+      
+      NEW PUSH ENDPOINTS (4/4 passed - 100% MOCKED):
+      ✅ GET /api/push/vapid returns {vapidPublicKey:null} (env not set)
+      ✅ POST /api/push/subscribe creates pushSubscriptions doc, returns mocked:true
+      ✅ Invalid subscription (no endpoint) returns 400
+      ✅ POST /api/push/unsubscribe deletes pushSubscriptions
+      
+      DATABASE ASSERTIONS:
+      ✅ All interactions, matches, messages, notifications, reports, blocks correctly persisted
+      ✅ User tier upgrades/downgrades reflected in users collection
+      ✅ Verification approvals/rejections update profiles + create notifications
+      ✅ Push subscriptions created/deleted correctly
+      
+      BACKEND REFACTOR VALIDATION:
+      ✅ Monolithic /app/app/api/[[...path]]/route.js successfully split into modular handlers
+      ✅ Thin dispatcher /app/lib/api/router.js correctly routes to handlers
+      ✅ NO BEHAVIOR CHANGE - all existing endpoints work identically
+      ✅ New admin/billing/push endpoints integrated seamlessly
+      
+      NO CRITICAL ISSUES FOUND. Backend refactor successful. All new features working correctly.
+
 
 
 # WAVE 1 UPGRADE — Onboarding, match reasons, distance, recently-active, notifications, chat upgrades, admin, verification flow
