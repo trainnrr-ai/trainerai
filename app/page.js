@@ -37,6 +37,39 @@ function loginWithGoogle() {
   window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`
 }
 
+// Client-side image compression: downscales to maxDim (longest edge) and re-encodes JPEG
+// at given quality. Keeps base64 sizes ~150-300KB for production-safe MongoDB storage.
+function compressImage(file, maxDim = 1080, quality = 0.78) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type?.startsWith('image/')) return reject(new Error('Not an image'))
+    const reader = new FileReader()
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => {
+        try {
+          let { width, height } = img
+          if (width > maxDim || height > maxDim) {
+            const ratio = Math.min(maxDim / width, maxDim / height)
+            width = Math.round(width * ratio)
+            height = Math.round(height * ratio)
+          }
+          const canvas = document.createElement('canvas')
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx.imageSmoothingQuality = 'high'
+          ctx.drawImage(img, 0, 0, width, height)
+          resolve(canvas.toDataURL('image/jpeg', quality))
+        } catch (e) { reject(e) }
+      }
+      img.onerror = () => reject(new Error('Image load failed'))
+      img.src = reader.result
+    }
+    reader.onerror = () => reject(new Error('File read failed'))
+    reader.readAsDataURL(file)
+  })
+}
+
 function Navbar({ user, view, setView }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-strong">
@@ -344,9 +377,9 @@ function ProfileEditor({ user, profile, onSaved }) {
     const file = e.target.files?.[0]
     if (!file) return
     if (form.photos.length >= 5) { toast.error('Maximum 5 photos'); return }
-    const reader = new FileReader()
-    reader.onload = () => update('photos', [...form.photos, reader.result])
-    reader.readAsDataURL(file)
+    compressImage(file, 1080, 0.78).then(dataUrl => {
+      update('photos', [...form.photos, dataUrl])
+    }).catch(() => toast.error('Could not process image'))
     e.target.value = ''
   }
 
@@ -1667,65 +1700,47 @@ function PrivacyView({ onNav }) {
 }
 
 function ContactView({ onNav }) {
-  const [form, setForm] = useState({ name: '', email: '', message: '' })
-  const [sending, setSending] = useState(false)
-  const submit = async (e) => {
-    e.preventDefault()
-    if (!form.name || !form.email || !form.message) { toast.error('Please fill all fields'); return }
-    setSending(true)
-    // MOCKED: would POST to /api/contact in production
-    await new Promise(r => setTimeout(r, 700))
-    setSending(false)
-    setForm({ name: '', email: '', message: '' })
-    toast.success('Message sent!', { description: `We'll get back to you at ${form.email} within 24 hours.` })
+  const openEmail = () => {
+    const subject = encodeURIComponent('Hello Trainr team')
+    const body = encodeURIComponent('Hi Trainr team,\n\nI wanted to reach out about ')
+    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`
   }
   return (
     <PageShell title="Talk to the Trainr team." kicker="Contact" onNav={onNav}>
       <p className="text-white/70 max-w-2xl">Trainr is committed to building a safe and supportive fitness community. Have a question, a partnership idea, or a safety concern? Reach out — we read every message.</p>
 
       <div className="grid md:grid-cols-2 gap-4 pt-2">
-        <div className="space-y-3">
-          <a href={`mailto:${SUPPORT_EMAIL}`} className="block glass rounded-2xl p-5 hover:bg-white/[0.07] transition">
-            <div className="text-xs uppercase tracking-wider text-white/40 mb-1">Email</div>
-            <div className="font-semibold text-[#00ff88]">{SUPPORT_EMAIL}</div>
-            <div className="text-xs text-white/50 mt-1">For support, partnerships, press</div>
-          </a>
-          <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="block glass rounded-2xl p-5 hover:bg-white/[0.07] transition">
-            <div className="text-xs uppercase tracking-wider text-white/40 mb-1">Instagram</div>
-            <div className="font-semibold text-[#00ff88] flex items-center gap-2"><Instagram className="w-4 h-4" /> @trainr.in</div>
-            <div className="text-xs text-white/50 mt-1">DMs open · daily updates · community spotlights</div>
-          </a>
-          <div className="glass rounded-2xl p-5">
-            <div className="text-xs uppercase tracking-wider text-white/40 mb-1">Response time</div>
-            <div className="font-semibold">Within 24 hours</div>
-            <div className="text-xs text-white/50 mt-1">Safety reports prioritized within 4 hours.</div>
-          </div>
-          <div className="glass rounded-2xl p-5">
-            <div className="text-xs uppercase tracking-wider text-white/40 mb-1">Community support</div>
-            <div className="font-semibold">Built on trust</div>
-            <div className="text-xs text-white/50 mt-1">Every report is read by a real human. No bots.</div>
-          </div>
-        </div>
-
-        <form onSubmit={submit} className="glass-strong rounded-2xl p-6 space-y-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wide text-white/50">Your name</Label>
-            <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="bg-white/5 border-white/10" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wide text-white/50">Email</Label>
-            <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="bg-white/5 border-white/10" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wide text-white/50">Message</Label>
-            <Textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} className="bg-white/5 border-white/10 min-h-[140px]" placeholder="What\u2019s on your mind?" />
-          </div>
-          <Button type="submit" disabled={sending} className="w-full bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full h-11">
-            {sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</> : <>Send Message <ArrowRight className="w-4 h-4 ml-2" /></>}
+        <a href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Hello Trainr team')}`} className="block glass-strong rounded-2xl p-6 hover:bg-white/[0.06] hover:border-white/15 transition group">
+          <div className="text-xs uppercase tracking-wider text-white/40 mb-1">Email us directly</div>
+          <div className="text-2xl md:text-3xl font-extrabold text-[#00ff88] group-hover:underline">{SUPPORT_EMAIL}</div>
+          <div className="text-sm text-white/55 mt-2">For support, partnerships, press &amp; safety concerns.</div>
+          <Button onClick={openEmail} className="mt-5 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full">
+            <Send className="w-4 h-4 mr-2" /> Open email app
           </Button>
-          <p className="text-xs text-white/40 text-center">Trainr is committed to building a safe and supportive fitness community.</p>
-        </form>
+        </a>
+        <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" className="block glass-strong rounded-2xl p-6 hover:bg-white/[0.06] hover:border-white/15 transition group">
+          <div className="text-xs uppercase tracking-wider text-white/40 mb-1">DM us on Instagram</div>
+          <div className="text-2xl md:text-3xl font-extrabold flex items-center gap-2 text-[#00ff88] group-hover:underline">
+            <Instagram className="w-6 h-6" /> @trainr.in
+          </div>
+          <div className="text-sm text-white/55 mt-2">DMs open · daily updates · community spotlights.</div>
+          <Button variant="outline" className="mt-5 bg-white/5 border-white/15 rounded-full">
+            Open Instagram <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </a>
+
+        <div className="glass rounded-2xl p-5">
+          <div className="text-xs uppercase tracking-wider text-white/40 mb-1">Response time</div>
+          <div className="font-semibold">Within 24 hours</div>
+          <div className="text-xs text-white/50 mt-1">Safety reports prioritized within 4 hours.</div>
+        </div>
+        <div className="glass rounded-2xl p-5">
+          <div className="text-xs uppercase tracking-wider text-white/40 mb-1">Community support</div>
+          <div className="font-semibold">Built on trust</div>
+          <div className="text-xs text-white/50 mt-1">Every report is read by a real human. No bots.</div>
+        </div>
       </div>
+      <p className="text-xs text-white/45 text-center pt-4">Trainr is committed to building a safe and supportive fitness community.</p>
     </PageShell>
   )
 }
