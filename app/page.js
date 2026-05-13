@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
@@ -42,7 +43,7 @@ import ReportDialog from '@/components/views/ReportDialog'
 // Premium UI is hidden by default — flip NEXT_PUBLIC_PREMIUM_ENABLED=true to expose Pro CTA + Settings card.
 const PREMIUM_ENABLED = process.env.NEXT_PUBLIC_PREMIUM_ENABLED === 'true'
 
-function Navbar({ user, view, setView, onOpenPremium }) {
+function Navbar({ user, view, setView, onOpenPremium, pendingIncomingCount = 0 }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-strong">
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
@@ -55,7 +56,14 @@ function Navbar({ user, view, setView, onOpenPremium }) {
         {user ? (
           <nav className="flex items-center gap-1 md:gap-2">
             <button onClick={() => setView('discover')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'discover' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Discover</button>
-            <button onClick={() => setView('matches')} className={`px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'matches' || view === 'chat' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Connections</button>
+            <button onClick={() => setView('matches')} className={`relative px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'matches' || view === 'chat' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>
+              Connections
+              {pendingIncomingCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#00ff88] text-black text-[10px] font-extrabold flex items-center justify-center ring-2 ring-background">
+                  {pendingIncomingCount > 9 ? '9+' : pendingIncomingCount}
+                </span>
+              )}
+            </button>
             <NotificationBell onNavigate={setView} />
             {user.tier !== 'pro' && PREMIUM_ENABLED && (
               <button onClick={onOpenPremium} title="Trainr Pro" className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-amber-400/10 hover:bg-amber-400/15 border border-amber-400/30 text-amber-300 text-xs font-bold transition">
@@ -396,7 +404,14 @@ function ChoiceGrid({ options, value, onChange, icon: Icon, large }) {
 
 function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
+  const [pending, setPending] = useState(false)
   const photos = profile.photos || []
+  const triggerConnect = () => {
+    if (pending) return
+    setPending(true)
+    // Allow the 220ms glow animation to play, then propagate (parent removes the card)
+    setTimeout(() => onLike(profile), 200)
+  }
   return (
     <div className="snap-start min-h-[calc(100vh-4rem)] flex items-center py-3 md:py-6 fade-up" style={{ animationDelay: `${Math.min(index * 0.05, 0.3)}s` }}>
       <Card className="glass-strong border-white/10 overflow-hidden w-full max-w-md mx-auto rounded-3xl shadow-2xl shadow-black/30 hover:border-white/15 transition-colors">
@@ -463,8 +478,12 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
             <Button onClick={() => onSkip(profile)} variant="outline" className="rounded-xl bg-white/5 border-white/10 hover:bg-white/10 active:scale-95 h-12 transition" aria-label="Skip">
               <X className="w-5 h-5" />
             </Button>
-            <Button onClick={() => onLike(profile)} className="rounded-xl bg-[#00ff88] hover:bg-[#00cc6a] active:scale-[0.98] text-black font-semibold h-12 transition shadow-lg shadow-[#00ff88]/20">
-              <Heart className="w-[18px] h-[18px] mr-1.5 fill-black" /> Connect
+            <Button onClick={triggerConnect} disabled={pending} className={`rounded-xl bg-[#00ff88] hover:bg-[#00cc6a] active:scale-[0.98] text-black font-semibold h-12 transition shadow-lg shadow-[#00ff88]/20 disabled:opacity-100 ${pending ? 'connect-ping pending-halo' : ''}`}>
+              {pending ? (
+                <><Check className="w-[18px] h-[18px] mr-1.5" /> Pending</>
+              ) : (
+                <><Heart className="w-[18px] h-[18px] mr-1.5 fill-black" /> Connect</>
+              )}
             </Button>
             <Button onClick={() => onReport(profile)} variant="outline" className="rounded-xl bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 active:scale-95 h-12 transition" aria-label="Report">
               <AlertTriangle className="w-5 h-5" />
@@ -582,14 +601,30 @@ function Discover() {
 
   useEffect(() => { load() }, []) // eslint-disable-line
 
-  const handleLike = async (p) => {
+  const handleConnect = async (p) => {
+    // Optimistic: remove the card from the feed immediately
     setProfiles(prev => (prev || []).filter(x => x.id !== p.id))
     try {
-      const res = await fetch('/api/profiles/like', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: p.id }) })
+      const res = await fetch('/api/profiles/connect', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId: p.id }),
+      })
       const data = await res.json()
-      if (data.matched) toast.success(`Mutual connection with ${p.name}!`, { description: 'Open Connections to start chatting.' })
-      else toast(`Connected with ${p.name}`, { description: 'They\u2019ll be notified.' })
-    } catch { toast.error('Failed to like') }
+      if (res.status === 429 && data?.status === 'cooldown') {
+        toast('You can connect again later.', { description: 'This person previously declined. Try again after the cooldown.' })
+        return
+      }
+      if (!res.ok) {
+        toast.error(data.error || 'Could not send request')
+        return
+      }
+      if (data.status === 'accepted') {
+        toast.success(`You're now connected with ${p.name}!`, { description: 'Plan your next workout together — open chat.' })
+      } else {
+        toast.success(`Request sent to ${p.name}`, { description: 'They\u2019ll be notified.' })
+      }
+    } catch { toast.error('Failed to send request') }
   }
 
   const handleSkip = async (p) => {
@@ -654,7 +689,7 @@ function Discover() {
           <EmptyDiscover onResetFilters={() => load({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0 })} />
         )}
         {profiles?.map(p => (
-          <ProfileCard key={p.id} profile={p} onLike={handleLike} onSkip={handleSkip} onReport={setReportProfile} />
+          <ProfileCard key={p.id} profile={p} onLike={handleConnect} onSkip={handleSkip} onReport={setReportProfile} />
         ))}
       </div>
 
@@ -697,57 +732,231 @@ function EmptyDiscover({ onResetFilters }) {
   )
 }
 
-function Matches({ onOpenChat }) {
-  const [matches, setMatches] = useState(null)
-  useEffect(() => {
-    fetch('/api/matches', { credentials: 'include' }).then(r => r.json()).then(d => setMatches(d.matches || []))
-  }, [])
+function ChatsList({ matches, onOpenChat, animateLatest }) {
   return (
-    <div className="pt-20 pb-12 max-w-2xl mx-auto px-4 md:px-6">
-      <h1 className="text-3xl md:text-4xl font-black tracking-tight">Connections</h1>
-      <p className="text-white/60 mt-1">Mutual workout partners ready to train together.</p>
-      <div className="mt-8 space-y-3">
-        {matches === null && [1,2,3].map(i => <Skeleton key={i} className="h-20 rounded-2xl bg-white/5" />)}
-        {matches && matches.length === 0 && (
-          <div className="glass rounded-2xl p-10 text-center">
-            <Heart className="w-10 h-10 mx-auto text-[#00ff88] mb-3" />
-            <p className="text-white/70">No connections yet. Keep discovering!</p>
+    <div className="space-y-3">
+      {matches === null && [1, 2, 3].map(i => <Skeleton key={i} className="h-20 rounded-2xl bg-white/5" />)}
+      {matches && matches.length === 0 && (
+        <div className="glass rounded-2xl p-10 text-center">
+          <Heart className="w-10 h-10 mx-auto text-[#00ff88] mb-3" />
+          <p className="text-white/70">No connections yet. Keep discovering!</p>
+        </div>
+      )}
+      {matches?.map((m, idx) => (
+        <button
+          key={m.id}
+          onClick={() => onOpenChat(m)}
+          className={`w-full glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.07] hover:border-white/15 active:scale-[0.99] transition text-left ${animateLatest && idx === 0 ? 'slide-in' : ''}`}
+        >
+          <div className="relative">
+            <Avatar className="w-14 h-14 ring-1 ring-white/10">
+              <AvatarImage src={m.otherProfile?.photos?.[0]} />
+              <AvatarFallback>{m.otherProfile?.name?.slice(0, 1)}</AvatarFallback>
+            </Avatar>
+            {m.otherProfile?.online && (
+              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-[#00ff88] ring-2 ring-background" />
+            )}
           </div>
-        )}
-        {matches?.map(m => (
-          <button key={m.id} onClick={() => onOpenChat(m)} className="w-full glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.07] hover:border-white/15 active:scale-[0.99] transition text-left">
-            <div className="relative">
-              <Avatar className="w-14 h-14 ring-1 ring-white/10">
-                <AvatarImage src={m.otherProfile?.photos?.[0]} />
-                <AvatarFallback>{m.otherProfile?.name?.slice(0,1)}</AvatarFallback>
-              </Avatar>
-              {m.otherProfile?.online && (
-                <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-[#00ff88] ring-2 ring-background" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold truncate">{m.otherProfile?.name}<span className="text-white/60 font-medium">, {m.otherProfile?.age}</span></span>
+              <VerificationBadge verified={m.otherProfile?.verified} />
+              {m.unreadCount > 0 && (
+                <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-[#00ff88] text-black text-[10px] font-extrabold flex items-center justify-center">
+                  {m.unreadCount > 9 ? '9+' : m.unreadCount}
+                </span>
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold truncate">{m.otherProfile?.name}<span className="text-white/60 font-medium">, {m.otherProfile?.age}</span></span>
-                <VerificationBadge verified={m.otherProfile?.verified} />
-                {m.unreadCount > 0 && (
-                  <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-[#00ff88] text-black text-[10px] font-extrabold flex items-center justify-center">
-                    {m.unreadCount > 9 ? '9+' : m.unreadCount}
-                  </span>
-                )}
+            {m.lastMessage ? (
+              <div className={`text-xs truncate mt-0.5 ${m.unreadCount > 0 ? 'text-white/85 font-medium' : 'text-white/50'}`}>
+                {m.lastMessage.fromMe && <span className="text-white/40">You: </span>}
+                {m.lastMessage.text}
               </div>
-              {m.lastMessage ? (
-                <div className={`text-xs truncate mt-0.5 ${m.unreadCount > 0 ? 'text-white/85 font-medium' : 'text-white/50'}`}>
-                  {m.lastMessage.fromMe && <span className="text-white/40">You: </span>}
-                  {m.lastMessage.text}
-                </div>
-              ) : (
-                <div className="text-xs text-white/45 truncate mt-0.5">{m.otherProfile?.gymName} · {m.otherProfile?.goal}</div>
-              )}
-            </div>
-            <ChevronRight className="w-5 h-5 text-white/40" />
+            ) : (
+              <div className="text-xs text-white/45 truncate mt-0.5">{m.otherProfile?.gymName} · {m.otherProfile?.goal}</div>
+            )}
+          </div>
+          <ChevronRight className="w-5 h-5 text-white/40" />
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function RequestRow({ req, kind, onAccept, onDecline, onCancel }) {
+  const p = kind === 'incoming' ? req.fromProfile : req.toProfile
+  const [busy, setBusy] = useState(false)
+  const wrap = async (fn) => {
+    if (busy) return
+    setBusy(true)
+    try { await fn() } finally { setBusy(false) }
+  }
+  return (
+    <div className="glass rounded-2xl p-4 flex items-center gap-3 slide-in">
+      <Avatar className="w-12 h-12 ring-1 ring-white/10">
+        <AvatarImage src={p?.photos?.[0]} />
+        <AvatarFallback>{p?.name?.slice(0, 1) || '?'}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold truncate flex items-center gap-1.5">
+          {p?.name || 'Unknown'}{p?.age ? <span className="text-white/55 font-medium">, {p.age}</span> : null}
+          <VerificationBadge verified={p?.verified} />
+        </div>
+        <div className="text-xs text-white/55 truncate">{p?.gymName || '—'}{p?.city ? ` · ${p.city}` : ''}</div>
+        {p?.goal && <div className="text-[11px] text-[#00ff88]/85 truncate mt-0.5">{p.goal}</div>}
+      </div>
+      {kind === 'incoming' ? (
+        <div className="flex flex-col gap-1.5">
+          <Button size="sm" onClick={() => wrap(() => onAccept(req))} disabled={busy} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold h-8 text-xs px-3">
+            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Accept'}
+          </Button>
+          <Button size="sm" onClick={() => wrap(() => onDecline(req))} disabled={busy} variant="outline" className="bg-white/5 border-white/10 hover:bg-white/10 h-8 text-xs px-3">Decline</Button>
+        </div>
+      ) : (
+        <Button size="sm" onClick={() => wrap(() => onCancel(req))} disabled={busy} variant="outline" className="bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/25 hover:text-red-300 h-8 text-xs px-3">
+          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Cancel'}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+function RequestsTab({ onAccepted }) {
+  const [tab, setTab] = useState('incoming')
+  const [incoming, setIncoming] = useState(null)
+  const [outgoing, setOutgoing] = useState(null)
+
+  const loadIncoming = async () => {
+    try {
+      const r = await fetch('/api/requests/incoming', { credentials: 'include' })
+      const d = await r.json()
+      setIncoming(d.requests || [])
+    } catch { setIncoming([]) }
+  }
+  const loadOutgoing = async () => {
+    try {
+      const r = await fetch('/api/requests/outgoing', { credentials: 'include' })
+      const d = await r.json()
+      setOutgoing(d.requests || [])
+    } catch { setOutgoing([]) }
+  }
+  useEffect(() => { loadIncoming(); loadOutgoing() }, [])
+
+  const accept = async (req) => {
+    try {
+      const r = await fetch('/api/requests/accept', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId: req.id }) })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || 'Could not accept')
+      toast.success(`You're now connected with ${req.fromProfile?.name || 'a partner'} 💪`, { description: 'Open chat to plan your next workout together.' })
+      setIncoming(prev => (prev || []).filter(x => x.id !== req.id))
+      onAccepted?.()
+    } catch (e) { toast.error(e.message) }
+  }
+  const decline = async (req) => {
+    try {
+      const r = await fetch('/api/requests/decline', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId: req.id }) })
+      if (!r.ok) throw new Error('Could not decline')
+      setIncoming(prev => (prev || []).filter(x => x.id !== req.id))
+    } catch (e) { toast.error(e.message) }
+  }
+  const cancel = async (req) => {
+    try {
+      const r = await fetch('/api/requests/cancel', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId: req.id }) })
+      if (!r.ok) throw new Error('Could not cancel')
+      setOutgoing(prev => (prev || []).filter(x => x.id !== req.id))
+      toast('Request withdrawn')
+    } catch (e) { toast.error(e.message) }
+  }
+
+  return (
+    <div>
+      <div className="flex gap-1 bg-white/5 rounded-lg p-1 mb-4 w-fit">
+        {[
+          { k: 'incoming', label: 'Incoming', count: incoming?.length },
+          { k: 'sent', label: 'Sent', count: outgoing?.length },
+        ].map(t => (
+          <button
+            key={t.k}
+            onClick={() => setTab(t.k)}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${tab === t.k ? 'bg-white/10 text-white' : 'text-white/55 hover:text-white'}`}
+          >
+            {t.label}{typeof t.count === 'number' && t.count > 0 ? <span className="ml-1.5 text-[#00ff88]">{t.count}</span> : ''}
           </button>
         ))}
       </div>
+
+      {tab === 'incoming' && (
+        <div className="space-y-3">
+          {incoming === null && [1, 2].map(i => <Skeleton key={i} className="h-20 rounded-2xl bg-white/5" />)}
+          {incoming && incoming.length === 0 && (
+            <div className="glass rounded-2xl p-10 text-center">
+              <Bell className="w-10 h-10 mx-auto text-white/30 mb-3" />
+              <p className="text-white/65 font-medium">No new requests</p>
+              <p className="text-xs text-white/40 mt-1">When someone wants to train with you, they\u2019ll show up here.</p>
+            </div>
+          )}
+          {incoming?.map(req => <RequestRow key={req.id} req={req} kind="incoming" onAccept={accept} onDecline={decline} />)}
+        </div>
+      )}
+
+      {tab === 'sent' && (
+        <div className="space-y-3">
+          {outgoing === null && [1, 2].map(i => <Skeleton key={i} className="h-20 rounded-2xl bg-white/5" />)}
+          {outgoing && outgoing.length === 0 && (
+            <div className="glass rounded-2xl p-10 text-center">
+              <Send className="w-10 h-10 mx-auto text-white/30 mb-3" />
+              <p className="text-white/65 font-medium">No pending requests sent</p>
+              <p className="text-xs text-white/40 mt-1">Head to Discover to find your next workout partner.</p>
+            </div>
+          )}
+          {outgoing?.map(req => <RequestRow key={req.id} req={req} kind="sent" onCancel={cancel} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Connections({ onOpenChat }) {
+  const [matches, setMatches] = useState(null)
+  const [pendingIncomingCount, setPendingIncomingCount] = useState(0)
+  const [tab, setTab] = useState('chats')
+
+  const loadMatches = async () => {
+    try {
+      const r = await fetch('/api/matches', { credentials: 'include' })
+      const d = await r.json()
+      setMatches(d.matches || [])
+      setPendingIncomingCount(d.pendingIncomingCount || 0)
+    } catch { setMatches([]) }
+  }
+  useEffect(() => { loadMatches() }, [])
+
+  return (
+    <div className="pt-20 pb-12 max-w-2xl mx-auto px-4 md:px-6">
+      <h1 className="text-3xl md:text-4xl font-black tracking-tight">Connections</h1>
+      <p className="text-white/60 mt-1 text-sm">Mutual workout partners ready to train together.</p>
+
+      <Tabs value={tab} onValueChange={setTab} className="w-full mt-6">
+        <TabsList className="bg-white/5 border border-white/10">
+          <TabsTrigger value="chats" className="data-[state=active]:bg-white/10 data-[state=active]:text-white">
+            Chats{matches?.length ? <span className="ml-1.5 text-white/45">{matches.length}</span> : null}
+          </TabsTrigger>
+          <TabsTrigger value="requests" className="relative data-[state=active]:bg-white/10 data-[state=active]:text-white">
+            Requests
+            {pendingIncomingCount > 0 && (
+              <span className="ml-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#00ff88] text-black text-[10px] font-extrabold flex items-center justify-center">
+                {pendingIncomingCount > 9 ? '9+' : pendingIncomingCount}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="chats" className="mt-5">
+          <ChatsList matches={matches} onOpenChat={onOpenChat} animateLatest />
+        </TabsContent>
+        <TabsContent value="requests" className="mt-5">
+          <RequestsTab onAccepted={loadMatches} />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
@@ -1188,6 +1397,24 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [activeChat, setActiveChat] = useState(null)
   const [showPremium, setShowPremium] = useState(false)
+  const [pendingIncomingCount, setPendingIncomingCount] = useState(0)
+
+  // Lightweight polling for incoming-request count (badge on Connections nav).
+  // Runs only when authenticated; 30s interval is enough for non-realtime UX.
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    const tick = async () => {
+      try {
+        const r = await fetch('/api/matches', { credentials: 'include' })
+        const d = await r.json()
+        if (!cancelled) setPendingIncomingCount(d.pendingIncomingCount || 0)
+      } catch {}
+    }
+    tick()
+    const t = setInterval(tick, 30000)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [user])
 
   useEffect(() => {
     const hash = window.location.hash
@@ -1252,14 +1479,14 @@ function App() {
 
   return (
     <div className="min-h-screen">
-      <Navbar user={user} view={view} setView={setView} onOpenPremium={() => setShowPremium(true)} />
+      <Navbar user={user} view={view} setView={setView} onOpenPremium={() => setShowPremium(true)} pendingIncomingCount={pendingIncomingCount} />
       {!user && view === 'landing' && <Landing onNav={setView} />}
       {!user && view === 'about' && <AboutView onNav={setView} />}
       {!user && view === 'privacy' && <PrivacyView onNav={setView} />}
       {!user && view === 'contact' && <ContactView onNav={setView} />}
       {user && view === 'profile-edit' && <ProfileEditor user={user} profile={profile} onSaved={handleProfileSaved} />}
       {user && view === 'discover' && (profile ? <Discover /> : <ProfileEditor user={user} profile={null} onSaved={handleProfileSaved} />)}
-      {user && view === 'matches' && <Matches onOpenChat={(m) => { setActiveChat(m); setView('chat') }} />}
+      {user && view === 'matches' && <Connections onOpenChat={(m) => { setActiveChat(m); setView('chat') }} />}
       {user && view === 'chat' && activeChat && <Chat match={activeChat} currentUserId={user.id} onBack={() => { setActiveChat(null); setView('matches') }} onChatRemoved={handleChatRemoved} />}
       {user && view === 'settings' && <SettingsView user={user} profile={profile} onEditProfile={() => setView('profile-edit')} onLogout={handleLogout} onProfileUpdated={(p) => setProfile(p)} onOpenPremium={() => setShowPremium(true)} onAccountDeleted={handleAccountDeleted} />}
       {user && view === 'admin' && (user.isAdmin ? <AdminView /> : <ForbiddenView onBack={() => setView('discover')} />)}

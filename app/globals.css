@@ -101,6 +101,27 @@
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
+  /* Subtle "request sent" feedback — under 250ms, premium fitness vibe (not dating-app loud) */
+  .connect-ping {
+    animation: connectPing 220ms cubic-bezier(0.16,1,0.3,1) both;
+  }
+  @keyframes connectPing {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,255,136,0.45); }
+    60% { transform: scale(1.03); box-shadow: 0 0 0 14px rgba(0,255,136,0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,255,136,0); }
+  }
+  /* Soft glow halo for the Pending button state */
+  .pending-halo {
+    box-shadow: 0 0 0 1px rgba(0,255,136,0.35), 0 0 18px rgba(0,255,136,0.18);
+  }
+  /* Connection-added soft slide-in for Connections list */
+  .slide-in {
+    animation: slideIn 240ms cubic-bezier(0.16,1,0.3,1) both;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }
 
 html { scroll-behavior: smooth; }
