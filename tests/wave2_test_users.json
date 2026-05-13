@@ -1,0 +1,30 @@
+[
+  {
+    "name": "Arjun Sharma",
+    "email": "wave2_userA@test.trainr.in",
+    "userId": "c3991c7d-86a7-4c3d-991d-6205ac11b004",
+    "profileId": "9a567347-87ac-49db-9488-4cc7e02dd6db",
+    "sessionToken": "f4a4ef85-a583-4566-84cc-45010bfed7ad"
+  },
+  {
+    "name": "Priya Patel",
+    "email": "wave2_userB@test.trainr.in",
+    "userId": "9cf3bba1-75cb-4f96-89d6-1947ef27d55a",
+    "profileId": "6c46ba95-5c7d-4db9-913c-fd1995c91ed7",
+    "sessionToken": "86162675-cba1-4246-a858-d179387c8098"
+  },
+  {
+    "name": "Rohan Mehta",
+    "email": "wave2_userC@test.trainr.in",
+    "userId": "1d055a89-1625-475c-baba-2bb2db5bbe28",
+    "profileId": "8f2ab4a5-295a-4f4d-a1f3-78fd22b320ec",
+    "sessionToken": "84cc3062-384e-4311-9ae5-f245135b723d"
+  },
+  {
+    "name": "Sneha Reddy",
+    "email": "wave2_userD@test.trainr.in",
+    "userId": "442c30d0-e724-42ac-b895-6db557734a1f",
+    "profileId": "ab17a6e5-cce7-4381-926f-5e914ad2cda2",
+    "sessionToken": "6bf48770-5278-4301-a1c0-98fe40783cf6"
+  }
+]
