@@ -105,6 +105,9 @@ function ProfileEditor({ user, profile, onSaved }) {
   const isEditMode = !!profile
   const totalSteps = 7
   const [step, setStep] = useState(0)
+  const initialGoals = Array.isArray(profile?.goals) && profile.goals.length
+    ? profile.goals
+    : (profile?.goal ? [profile.goal] : [])
   const [form, setForm] = useState({
     name: profile?.name || user?.name || '',
     age: profile?.age || '',
@@ -112,7 +115,7 @@ function ProfileEditor({ user, profile, onSaved }) {
     city: profile?.city || '',
     gymName: profile?.gymName || '',
     level: profile?.level || '',
-    goal: profile?.goal || '',
+    goals: initialGoals,
     timing: profile?.timing || '',
     bio: profile?.bio || '',
     height: profile?.height || '',
@@ -146,7 +149,7 @@ function ProfileEditor({ user, profile, onSaved }) {
       case 0: if (form.photos.length < 3) return 'Add at least 3 photos'; break
       case 1: if (!form.name || !form.age || !form.gender) return 'Fill name, age and gender'; break
       case 2: if (!form.city || !form.gymName) return 'Pick city and your gym'; break
-      case 3: if (!form.goal) return 'Pick your workout goal'; break
+      case 3: if (!form.goals || form.goals.length === 0) return 'Pick at least 1 goal (max 3)'; break
       case 4: if (!form.timing) return 'Pick your workout timing'; break
       case 5: if (!form.level) return 'Pick your experience level'; break
       default: break
@@ -209,9 +212,8 @@ function ProfileEditor({ user, profile, onSaved }) {
                 <Select value={form.level} onValueChange={v => update('level', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>{LEVELS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent></Select>
               </Field>
-              <Field label="Workout Goal">
-                <Select value={form.goal} onValueChange={v => update('goal', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{GOALS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select>
+              <Field label="Workout Goals (max 3)">
+                <GoalsMultiSelect value={form.goals} onChange={(g) => update('goals', g)} />
               </Field>
               <Field label="Workout Timing">
                 <Select value={form.timing} onValueChange={v => update('timing', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Select" /></SelectTrigger>
@@ -243,7 +245,7 @@ function ProfileEditor({ user, profile, onSaved }) {
     { kicker: 'Step 1 of 7', title: 'Add your photos', sub: 'Real, recent photos build trust faster. Add 3 to 5.' },
     { kicker: 'Step 2 of 7', title: 'A bit about you', sub: 'Just the basics — name, age, gender.' },
     { kicker: 'Step 3 of 7', title: 'Where do you train?', sub: 'Pick your city and your home gym.' },
-    { kicker: 'Step 4 of 7', title: "What's your goal?", sub: 'We\u2019ll match you with partners chasing the same.' },
+    { kicker: 'Step 4 of 7', title: "Pick your goals", sub: 'Choose up to 3. We\u2019ll match you with partners chasing the same.' },
     { kicker: 'Step 5 of 7', title: 'When do you train?', sub: 'Schedule matters. Pick your usual session window.' },
     { kicker: 'Step 6 of 7', title: 'Experience level', sub: 'So we set realistic expectations between partners.' },
     { kicker: 'Step 7 of 7', title: 'Tell partners your story', sub: 'Short, real, and what you\u2019re looking for.' },
@@ -298,7 +300,10 @@ function ProfileEditor({ user, profile, onSaved }) {
               </Card>
             )}
             {step === 3 && (
-              <ChoiceGrid options={GOALS} value={form.goal} onChange={(v) => update('goal', v)} icon={Target} />
+              <Card className="glass border-white/10 p-5 md:p-6">
+                <div className="mb-3 text-sm text-white/65">Pick the goals you train for. <span className="text-white/40">Max 3.</span></div>
+                <GoalsMultiSelect value={form.goals} onChange={(g) => update('goals', g)} />
+              </Card>
             )}
             {step === 4 && (
               <ChoiceGrid options={TIMINGS} value={form.timing} onChange={(v) => update('timing', v)} icon={Clock} />
@@ -345,17 +350,123 @@ function ProfileEditor({ user, profile, onSaved }) {
   )
 }
 
+function GoalsMultiSelect({ value, onChange, max = 3 }) {
+  const list = Array.isArray(value) ? value : []
+  const toggle = (g) => {
+    if (list.includes(g)) {
+      onChange(list.filter(x => x !== g))
+    } else {
+      if (list.length >= max) { toast.error(`Max ${max} goals`); return }
+      onChange([...list, g])
+    }
+  }
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-2.5">
+        {GOALS.map(g => {
+          const selected = list.includes(g)
+          return (
+            <button
+              key={g}
+              type="button"
+              onClick={() => toggle(g)}
+              className={`text-left p-3.5 rounded-2xl border transition-all duration-200 active:scale-[0.98] ${
+                selected
+                  ? 'bg-[#00ff88]/12 border-[#00ff88]/55 text-white pending-halo'
+                  : 'bg-white/[0.03] border-white/10 text-white/85 hover:bg-white/[0.06] hover:border-white/20'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selected ? 'bg-[#00ff88]/25 text-[#00ff88]' : 'bg-white/5 text-white/45'}`}>
+                  <Target className="w-4 h-4" />
+                </div>
+                <span className="font-semibold text-sm flex-1 leading-tight">{g}</span>
+                {selected && <Check className="w-4 h-4 text-[#00ff88] flex-shrink-0" />}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+      <div className="text-[11px] text-white/45 mt-2.5 flex items-center justify-between">
+        <span>{list.length}/{max} selected</span>
+        {list.length > 0 && (
+          <button type="button" onClick={() => onChange([])} className="text-white/55 hover:text-white/85 transition">Clear</button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function PhotoEditorCard({ photos, setPhotos, photoUrl, setPhotoUrl, addPhoto, handleFile, removePhoto }) {
+  // Drag-and-drop reorder (HTML5 drag). On touch devices, the buttons below provide reorder fallback.
+  const [dragIdx, setDragIdx] = useState(null)
+  const [overIdx, setOverIdx] = useState(null)
+
+  const moveTo = (from, to) => {
+    if (from === to || from < 0 || to < 0 || from >= photos.length || to >= photos.length) return
+    const next = photos.slice()
+    const [item] = next.splice(from, 1)
+    next.splice(to, 0, item)
+    setPhotos(next)
+  }
+  const setAsMain = (i) => moveTo(i, 0)
+  const moveUp = (i) => moveTo(i, Math.max(0, i - 1))
+  const moveDown = (i) => moveTo(i, Math.min(photos.length - 1, i + 1))
+
   return (
     <Card className="glass border-white/10 p-5 md:p-6">
       <div className="grid grid-cols-3 md:grid-cols-5 gap-2.5 md:gap-3 mb-4">
-        {photos.map((p, i) => (
-          <div key={i} className="relative aspect-[3/4] rounded-xl overflow-hidden bg-white/5 border border-white/10 group">
-            <img src={p} alt="" className="w-full h-full object-cover" />
-            <button onClick={() => removePhoto(i)} className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/75 backdrop-blur flex items-center justify-center hover:bg-black/90"><X className="w-3.5 h-3.5" /></button>
-            {i === 0 && <Badge className="absolute bottom-1.5 left-1.5 bg-[#00ff88] text-black text-[10px] py-0 font-bold tracking-wide">MAIN</Badge>}
-          </div>
-        ))}
+        {photos.map((p, i) => {
+          const isMain = i === 0
+          const isOver = overIdx === i && dragIdx !== null && dragIdx !== i
+          return (
+            <div
+              key={`${i}-${p.slice(-20)}`}
+              draggable
+              onDragStart={(e) => { setDragIdx(i); e.dataTransfer.effectAllowed = 'move' }}
+              onDragOver={(e) => { e.preventDefault(); if (overIdx !== i) setOverIdx(i) }}
+              onDragLeave={() => setOverIdx(idx => (idx === i ? null : idx))}
+              onDrop={(e) => { e.preventDefault(); if (dragIdx !== null) moveTo(dragIdx, i); setDragIdx(null); setOverIdx(null) }}
+              onDragEnd={() => { setDragIdx(null); setOverIdx(null) }}
+              className={`relative aspect-[3/4] rounded-xl overflow-hidden bg-white/5 border transition-all duration-150 group cursor-grab active:cursor-grabbing
+                ${isMain ? 'border-[#00ff88]/60 pending-halo' : 'border-white/10'}
+                ${dragIdx === i ? 'opacity-50 scale-95' : ''}
+                ${isOver ? 'ring-2 ring-[#00ff88]/70 scale-[1.02]' : ''}`}
+            >
+              <img src={p} alt="" className="w-full h-full object-cover pointer-events-none" />
+              {/* Top-right: Delete */}
+              <button type="button" onClick={() => removePhoto(i)} className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/75 backdrop-blur flex items-center justify-center hover:bg-black/90 z-10" aria-label="Delete photo">
+                <X className="w-3.5 h-3.5" />
+              </button>
+              {/* Bottom-left: Main badge / Set-as-main */}
+              {isMain ? (
+                <Badge className="absolute bottom-1.5 left-1.5 bg-[#00ff88] text-black text-[10px] py-0 font-bold tracking-wide z-10">MAIN</Badge>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAsMain(i)}
+                  title="Set as main photo"
+                  className="absolute bottom-1.5 left-1.5 rounded-md bg-black/70 backdrop-blur px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white/85 hover:bg-black/90 hover:text-[#00ff88] transition z-10"
+                >
+                  Set main
+                </button>
+              )}
+              {/* Bottom-right: Up/Down chevrons (mobile-friendly reorder fallback) */}
+              <div className="absolute bottom-1.5 right-1.5 flex flex-col gap-0.5 z-10">
+                {i > 0 && (
+                  <button type="button" onClick={() => moveUp(i)} className="w-6 h-6 rounded-md bg-black/70 backdrop-blur flex items-center justify-center hover:bg-black/90 hover:text-[#00ff88]" aria-label="Move up">
+                    <ChevronLeft className="w-3.5 h-3.5 -rotate-90" />
+                  </button>
+                )}
+                {i < photos.length - 1 && (
+                  <button type="button" onClick={() => moveDown(i)} className="w-6 h-6 rounded-md bg-black/70 backdrop-blur flex items-center justify-center hover:bg-black/90 hover:text-[#00ff88]" aria-label="Move down">
+                    <ChevronLeft className="w-3.5 h-3.5 rotate-90" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })}
         {photos.length < 5 && (
           <label className="aspect-[3/4] rounded-xl border-2 border-dashed border-white/15 flex flex-col items-center justify-center text-white/40 hover:border-[#00ff88]/50 hover:text-[#00ff88] transition cursor-pointer">
             <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
@@ -365,10 +476,10 @@ function PhotoEditorCard({ photos, setPhotos, photoUrl, setPhotoUrl, addPhoto, h
         )}
       </div>
       <div className="flex gap-2">
-        <Input value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="Or paste image URL…" className="bg-white/5 border-white/10" />
+        <Input value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="Or paste image URL\u2026" className="bg-white/5 border-white/10" />
         <Button type="button" onClick={addPhoto} variant="outline" className="bg-white/5 border-white/10">Add URL</Button>
       </div>
-      <p className="text-xs text-white/40 mt-3">3–5 photos required. First photo is your main.</p>
+      <p className="text-xs text-white/40 mt-3">3\u20135 photos required. Drag to reorder, or use \u2191\u2193 buttons. First photo is your main.</p>
     </Card>
   )
 }
@@ -450,7 +561,9 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
               )}
             </div>
             <div className="flex flex-wrap gap-1.5 mt-3">
-              <Badge className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30 hover:bg-[#00ff88]/15 font-semibold">{profile.goal}</Badge>
+              {((profile.goals && profile.goals.length) ? profile.goals : (profile.goal ? [profile.goal] : [])).map(g => (
+                <Badge key={g} className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30 hover:bg-[#00ff88]/15 font-semibold">{g}</Badge>
+              ))}
               <Badge variant="outline" className="bg-white/10 text-white border-white/15 hover:bg-white/15">{profile.level}</Badge>
               <Badge variant="outline" className="bg-white/10 text-white border-white/15 hover:bg-white/15"><Clock className="w-3 h-3 mr-1" />{profile.timing}</Badge>
             </div>
@@ -499,6 +612,13 @@ function FiltersSheet({ filters, setFilters, onApply }) {
   const [local, setLocal] = useState(filters)
   useEffect(() => setLocal(filters), [filters])
   const set = (k, v) => setLocal(s => ({ ...s, [k]: v === '__any__' ? '' : v }))
+  const toggleGoal = (g) => {
+    const cur = Array.isArray(local.goals) ? local.goals : []
+    if (cur.includes(g)) setLocal(s => ({ ...s, goals: cur.filter(x => x !== g) }))
+    else if (cur.length >= 3) toast.error('Max 3 goals')
+    else setLocal(s => ({ ...s, goals: [...cur, g] }))
+  }
+  const blankFilters = { city: '', gym: '', goals: [], timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0, ageMin: 0, ageMax: 0 }
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -516,9 +636,24 @@ function FiltersSheet({ filters, setFilters, onApply }) {
           <Field label="Gym">
             <Input value={local.gym} onChange={e => set('gym', e.target.value)} placeholder="e.g. Cult Fit" className="bg-white/5 border-white/10" />
           </Field>
-          <Field label="Workout Goal">
-            <Select value={local.goal || '__any__'} onValueChange={v => set('goal', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Any" /></SelectTrigger>
-              <SelectContent><SelectItem value="__any__">Any</SelectItem>{GOALS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select>
+          <Field label={`Workout Goals${(local.goals?.length || 0) ? ` (${local.goals.length})` : ''}`}>
+            <div className="flex flex-wrap gap-1.5">
+              {GOALS.map(g => {
+                const sel = (local.goals || []).includes(g)
+                return (
+                  <button
+                    key={g} type="button" onClick={() => toggleGoal(g)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150 ${
+                      sel
+                        ? 'bg-[#00ff88]/15 border-[#00ff88]/55 text-[#00ff88] pending-halo'
+                        : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    {sel ? '\u2713 ' : ''}{g}
+                  </button>
+                )
+              })}
+            </div>
           </Field>
           <Field label="Workout Timing">
             <Select value={local.timing || '__any__'} onValueChange={v => set('timing', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Any" /></SelectTrigger>
@@ -532,7 +667,14 @@ function FiltersSheet({ filters, setFilters, onApply }) {
             <Select value={local.level || '__any__'} onValueChange={v => set('level', v)}><SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Any" /></SelectTrigger>
               <SelectContent><SelectItem value="__any__">Any</SelectItem>{LEVELS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent></Select>
           </Field>
-          <Field label={`Maximum distance${local.maxDistance ? ` (${local.maxDistance} km)` : ' — any'}`}>
+          <Field label={`Age range${(local.ageMin || local.ageMax) ? ` (${local.ageMin || 18}\u2013${local.ageMax || 60})` : ' \u2014 any'}`}>
+            <div className="flex items-center gap-2">
+              <Input type="number" inputMode="numeric" min={18} max={80} value={local.ageMin || ''} onChange={e => set('ageMin', parseInt(e.target.value, 10) || 0)} placeholder="Min" className="bg-white/5 border-white/10 h-10" />
+              <span className="text-white/40 text-sm">\u2013</span>
+              <Input type="number" inputMode="numeric" min={18} max={80} value={local.ageMax || ''} onChange={e => set('ageMax', parseInt(e.target.value, 10) || 0)} placeholder="Max" className="bg-white/5 border-white/10 h-10" />
+            </div>
+          </Field>
+          <Field label={`Maximum distance${local.maxDistance ? ` (${local.maxDistance} km)` : ' \u2014 any'}`}>
             <input
               type="range" min={0} max={50} step={5}
               value={local.maxDistance || 0}
@@ -546,7 +688,7 @@ function FiltersSheet({ filters, setFilters, onApply }) {
             <Switch id="vo" checked={local.verifiedOnly} onCheckedChange={v => set('verifiedOnly', v)} />
           </div>
           <div className="flex gap-2 pt-4">
-            <Button onClick={() => { const blank = { city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0 }; setLocal(blank); setFilters(blank); onApply?.(blank) }} variant="outline" className="flex-1 bg-white/5 border-white/10">Reset</Button>
+            <Button onClick={() => { setLocal(blankFilters); setFilters(blankFilters); onApply?.(blankFilters) }} variant="outline" className="flex-1 bg-white/5 border-white/10">Reset</Button>
             <Button onClick={() => { setFilters(local); onApply?.(local) }} className="flex-1 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold">Apply</Button>
           </div>
         </div>
@@ -556,7 +698,7 @@ function FiltersSheet({ filters, setFilters, onApply }) {
 }
 
 function Discover() {
-  const [filters, setFilters] = useState({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0 })
+  const [filters, setFilters] = useState({ city: '', gym: '', goals: [], timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0, ageMin: 0, ageMax: 0 })
   const [profiles, setProfiles] = useState(null)
   const [reportProfile, setReportProfile] = useState(null)
   const [showLocPrompt, setShowLocPrompt] = useState(false)
@@ -593,7 +735,14 @@ function Discover() {
   const load = async (f = filters) => {
     setProfiles(null)
     const params = new URLSearchParams()
-    Object.entries(f).forEach(([k,v]) => { if (v) params.append(k, String(v)) })
+    Object.entries(f).forEach(([k, v]) => {
+      if (v == null || v === '' || v === 0) return
+      if (Array.isArray(v)) {
+        if (v.length) params.set(k, v.join(','))
+        return
+      }
+      params.append(k, String(v))
+    })
     const res = await fetch('/api/profiles/discover?' + params.toString(), { credentials: 'include' })
     const data = await res.json()
     setProfiles(data.profiles || [])
@@ -686,7 +835,7 @@ function Discover() {
           </div>
         )}
         {profiles && profiles.length === 0 && (
-          <EmptyDiscover onResetFilters={() => load({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0 })} />
+          <EmptyDiscover onResetFilters={() => load({ city: '', gym: '', goals: [], timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0, ageMin: 0, ageMax: 0 })} />
         )}
         {profiles?.map(p => (
           <ProfileCard key={p.id} profile={p} onLike={handleConnect} onSkip={handleSkip} onReport={setReportProfile} />
