@@ -397,7 +397,6 @@ function ChoiceGrid({ options, value, onChange, icon: Icon, large }) {
 function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const photos = profile.photos || []
-  const active = formatLastActive(profile.lastActiveAt)
   return (
     <div className="snap-start min-h-[calc(100vh-4rem)] flex items-center py-3 md:py-6 fade-up" style={{ animationDelay: `${Math.min(index * 0.05, 0.3)}s` }}>
       <Card className="glass-strong border-white/10 overflow-hidden w-full max-w-md mx-auto rounded-3xl shadow-2xl shadow-black/30 hover:border-white/15 transition-colors">
@@ -415,24 +414,8 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
           <button onClick={() => setPhotoIdx(i => Math.max(0, i-1))} className="absolute left-0 top-0 w-1/3 h-full z-[5]" aria-label="Previous photo" />
           <button onClick={() => setPhotoIdx(i => Math.min(photos.length-1, i+1))} className="absolute right-0 top-0 w-1/3 h-full z-[5]" aria-label="Next photo" />
 
-          {(active.online || active.text) && (
-            <div className="absolute top-5 right-3 z-10 glass rounded-full px-2.5 py-[5px] flex items-center gap-1.5 border-white/15">
-              {active.online ? (
-                <>
-                  <span className="relative flex w-1.5 h-1.5">
-                    <span className="absolute inset-0 rounded-full bg-[#00ff88] animate-ping opacity-70" />
-                    <span className="relative rounded-full w-1.5 h-1.5 bg-[#00ff88]" />
-                  </span>
-                  <span className="text-[11px] font-semibold tracking-wide">Online</span>
-                </>
-              ) : (
-                <>
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/40" />
-                  <span className="text-[11px] font-medium tracking-wide text-white/70">{active.text}</span>
-                </>
-              )}
-            </div>
-          )}
+          {/* PRIVACY: last-active / online presence is intentionally hidden from non-connected users.
+              It only appears in Chat after a mutual connection is established. */}
 
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent p-5 pt-20 z-[6]">
             <div className="flex items-center gap-2 flex-wrap">
@@ -540,15 +523,11 @@ function FiltersSheet({ filters, setFilters, onApply }) {
             <div className="flex justify-between text-[10px] text-white/40 mt-1"><span>0 km</span><span>5</span><span>15</span><span>30</span><span>50+ (any)</span></div>
           </Field>
           <div className="flex items-center justify-between pt-1">
-            <Label htmlFor="ra" className="text-sm">Recently active only</Label>
-            <Switch id="ra" checked={local.recentlyActive} onCheckedChange={v => set('recentlyActive', v)} />
-          </div>
-          <div className="flex items-center justify-between">
             <Label htmlFor="vo" className="text-sm">Verified users only</Label>
             <Switch id="vo" checked={local.verifiedOnly} onCheckedChange={v => set('verifiedOnly', v)} />
           </div>
           <div className="flex gap-2 pt-4">
-            <Button onClick={() => { const blank = { city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, recentlyActive: false, maxDistance: 0 }; setLocal(blank); setFilters(blank); onApply?.(blank) }} variant="outline" className="flex-1 bg-white/5 border-white/10">Reset</Button>
+            <Button onClick={() => { const blank = { city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0 }; setLocal(blank); setFilters(blank); onApply?.(blank) }} variant="outline" className="flex-1 bg-white/5 border-white/10">Reset</Button>
             <Button onClick={() => { setFilters(local); onApply?.(local) }} className="flex-1 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold">Apply</Button>
           </div>
         </div>
@@ -558,7 +537,7 @@ function FiltersSheet({ filters, setFilters, onApply }) {
 }
 
 function Discover() {
-  const [filters, setFilters] = useState({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, recentlyActive: false, maxDistance: 0 })
+  const [filters, setFilters] = useState({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0 })
   const [profiles, setProfiles] = useState(null)
   const [reportProfile, setReportProfile] = useState(null)
   const [showLocPrompt, setShowLocPrompt] = useState(false)
@@ -672,7 +651,7 @@ function Discover() {
           </div>
         )}
         {profiles && profiles.length === 0 && (
-          <EmptyDiscover onResetFilters={() => load({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, recentlyActive: false, maxDistance: 0 })} />
+          <EmptyDiscover onResetFilters={() => load({ city: '', gym: '', goal: '', timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0 })} />
         )}
         {profiles?.map(p => (
           <ProfileCard key={p.id} profile={p} onLike={handleLike} onSkip={handleSkip} onReport={setReportProfile} />

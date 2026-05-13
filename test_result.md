@@ -315,16 +315,92 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Backend refactor — modular handlers (no behavior change)"
-    - "Admin verification queue endpoints"
-    - "Admin analytics endpoint"
-    - "Admin reports enrichment + status filter"
-    - "Admin users search + status filter"
-    - "Billing endpoints (MOCKED scaffolding)"
-    - "Push subscription endpoints (MOCKED scaffolding)"
+    - "Wave 1: Admin /api/admin/users — returns up to 1000 users + total + hasProfile flag"
+    - "Wave 1: Discover privacy — /api/profiles/discover strips lastActiveAt and location from non-connected profiles"
+    - "Wave 1: Discover filter — recentlyActive removed (still 200 OK if param passed, no behavioral effect)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend_wave3_privacy_and_admin_fix:
+  - task: "Admin users list returns total + hasProfile, raised limit to 1000"
+    implemented: true
+    working: true
+    file: "lib/api/handlers/admin.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          GET /api/admin/users now:
+            • returns { users, total, limit }
+            • limit default 1000 (configurable up to 5000 via ?limit=)
+            • sort { createdAt: -1, _id: -1 } so legacy users without createdAt still surface
+            • each user enriched with hasProfile boolean
+          Tests required:
+            1. Admin (hello@trainr.in) hits /api/admin/users → 200, response has total (number), users (array), limit (number).
+            2. ?q=<partial email> filter still works.
+            3. ?status=banned and ?status=active still filter correctly.
+            4. ?limit=10 returns at most 10 users but total reflects ALL matching users.
+            5. Non-admin hitting endpoint still gets 403.
+            6. Each user object has hasProfile boolean field.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ ALL 7 TESTS PASSED (100%)
+          
+          Test results:
+          1. ✅ Non-admin access returns 403 (admin guard working)
+          2. ✅ Response structure correct: { users: array, total: number, limit: number }
+          3. ✅ hasProfile flag accurate: true for users with profiles, false for users without
+          4. ✅ Query filter (?q=) works correctly (regex search on email/name)
+          5. ✅ Status filters work: ?status=active excludes banned, ?status=banned returns only banned
+          6. ✅ Limit parameter works: ?limit=2 returns max 2 users, but total reflects full count
+          7. ✅ Legacy users without createdAt field are returned (due to _id fallback sort)
+          
+          All new features working correctly. No issues found.
+
+  - task: "Discover strips lastActiveAt + location from response (privacy)"
+    implemented: true
+    working: true
+    file: "lib/api/handlers/discover.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          GET /api/profiles/discover output now:
+            • each profile no longer contains lastActiveAt
+            • each profile no longer contains location { lat, lng }
+            • distanceKm is still computed server-side BEFORE stripping, so distance shows correctly
+            • matchReasons still present
+          Recently-active filter param (?recentlyActive=true) is silently ignored — should not cause errors.
+          Tests:
+            1. Auth as user A, GET /api/profiles/discover → none of the returned profiles should have `lastActiveAt` or `location` properties.
+            2. distanceKm should still be a number (or null) on profiles.
+            3. ?recentlyActive=true does NOT 500.
+            4. Verified filter ?verifiedOnly=true still works.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ ALL 7 TESTS PASSED (100%)
+          
+          Privacy tests:
+          1. ✅ ZERO profiles have lastActiveAt field (verified across 4 profiles)
+          2. ✅ ZERO profiles have location field (verified across 4 profiles)
+          3. ✅ distanceKm field still present and valid (number or null)
+          4. ✅ matchReasons field still present
+          
+          Functionality tests:
+          5. ✅ ?recentlyActive=true returns 200 (silently ignored, no errors)
+          6. ✅ ?verifiedOnly=true filter works correctly (returns only verified profiles)
+          7. ✅ Skip/like/block exclusion still works (regression check)
+          
+          Privacy changes implemented correctly. Distance calculation works despite location being stripped from response.
 
 backend_wave2:
   - task: "Backend refactor — split monolith into /app/lib/api/handlers/*"
@@ -579,6 +655,34 @@ agent_communication:
       ✅ New admin/billing/push endpoints integrated seamlessly
       
       NO CRITICAL ISSUES FOUND. Backend refactor successful. All new features working correctly.
+  - agent: "testing"
+    message: |
+      ✅ WAVE 3 BACKEND TESTING COMPLETE (17/17 tests passed - 100%)
+      
+      ADMIN USERS LIST ENHANCEMENTS (7/7 passed):
+      ✅ Non-admin access returns 403 (admin guard working)
+      ✅ Response structure: { users: array, total: number, limit: number }
+      ✅ hasProfile flag: true for users with profiles, false without
+      ✅ Query filter (?q=) works (regex search on email/name)
+      ✅ Status filters: ?status=active excludes banned, ?status=banned returns only banned
+      ✅ Limit parameter: ?limit=2 returns max 2 users, total reflects full count
+      ✅ Legacy users without createdAt returned (due to _id fallback sort)
+      
+      DISCOVER PRIVACY CHANGES (7/7 passed):
+      ✅ ZERO profiles have lastActiveAt field (privacy: hide presence)
+      ✅ ZERO profiles have location field (privacy: hide exact location)
+      ✅ distanceKm field still present and valid (computed before stripping)
+      ✅ matchReasons field still present
+      ✅ ?recentlyActive=true returns 200 (silently ignored, no errors)
+      ✅ ?verifiedOnly=true filter works correctly
+      ✅ Skip/like/block exclusion still works (regression check)
+      
+      REGRESSION TESTS (3/3 passed):
+      ✅ Health check: GET /api returns {ok: true, app: 'trainr'}
+      ✅ Auth me: GET /api/auth/me without cookie returns {user: null}
+      ✅ Admin stats: GET /api/admin/stats returns all expected fields
+      
+      NO CRITICAL ISSUES FOUND. All Wave 3 privacy and admin enhancements working correctly.
 
 
 

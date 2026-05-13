@@ -140,6 +140,7 @@ function OverviewTab({ stats, analytics }) {
 
 function UsersTab({ refreshSig, onChanged }) {
   const [users, setUsers] = useState([])
+  const [total, setTotal] = useState(0)
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('all')
   const [loading, setLoading] = useState(false)
@@ -155,6 +156,7 @@ function UsersTab({ refreshSig, onChanged }) {
       if (status !== 'all') params.set('status', status)
       const data = await apiFetch('/api/admin/users?' + params.toString())
       setUsers(data.users || [])
+      setTotal(typeof data.total === 'number' ? data.total : (data.users?.length || 0))
     } catch (e) { toast.error(e.message) } finally { setLoading(false) }
   }
 
@@ -198,6 +200,12 @@ function UsersTab({ refreshSig, onChanged }) {
 
       <Card className="glass border-white/10 divide-y divide-white/5 overflow-hidden">
         {users.length === 0 && <div className="p-6 text-sm text-white/45 text-center">No users match.</div>}
+        {users.length > 0 && (
+          <div className="px-4 py-2 text-[11px] text-white/45 bg-white/[0.02] flex items-center justify-between">
+            <span>Showing <span className="text-white/70 font-semibold">{users.length}</span>{total > users.length ? <> of <span className="text-white/70 font-semibold">{total}</span></> : ''} user{total === 1 ? '' : 's'}</span>
+            {total > users.length && <span className="text-amber-300/80">Narrow with search to see more</span>}
+          </div>
+        )}
         {users.map(u => (
           <div key={u.id} className="p-4 flex items-center gap-3 text-sm">
             <Avatar className="w-9 h-9"><AvatarImage src={u.picture} /><AvatarFallback>{u.name?.slice(0, 1)}</AvatarFallback></Avatar>
@@ -205,6 +213,9 @@ function UsersTab({ refreshSig, onChanged }) {
               <div className="font-medium truncate flex items-center gap-2">
                 {u.name || 'Unknown'}
                 {u.tier === 'pro' && <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 text-[10px]">PRO</Badge>}
+                {u.hasProfile === false && (
+                  <Badge variant="outline" className="bg-white/5 text-white/55 border-white/10 text-[10px]">No profile</Badge>
+                )}
               </div>
               <div className="text-xs text-white/50 truncate">{u.email}</div>
               <div className="text-[10px] text-white/35">Joined {timeAgo(u.createdAt)}</div>
