@@ -1,2 +1,0 @@
-{"_id":{"$oid":"6a0500da4b32c54da57a3896"},"id":"9690ecc7-8561-4121-b561-dc2a91bdd6d2","email":"hello@trainr.in","name":"Admin User","createdAt":{"$date":"2026-05-13T22:53:14.977Z"},"banned":false}
-{"_id":{"$oid":"6a05011774c159b34ba49f8e"},"id":"1a14db32-64db-45fa-ab0d-e5c9157b51e1","email":"hello@trainr.in","name":"Admin User","createdAt":{"$date":"2026-05-13T22:54:15.642Z"},"banned":false}
