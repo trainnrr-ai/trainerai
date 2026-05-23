@@ -59,7 +59,7 @@ export default function NotificationBell({ onNavigate }) {
         <button className="relative w-9 h-9 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition" title="Notifications">
           <Bell className="w-4 h-4 text-white/70" />
           {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[#00ff88] text-black text-[10px] font-extrabold flex items-center justify-center ring-2 ring-[#0a0b0d]">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[#24d18f] text-black text-[10px] font-extrabold flex items-center justify-center ring-2 ring-[#0a0b0d]">
               {unread > 9 ? '9+' : unread}
             </span>
           )}
@@ -68,7 +68,7 @@ export default function NotificationBell({ onNavigate }) {
       <SheetContent className="bg-[#0a0b0d] border-white/10 overflow-y-auto w-full sm:max-w-sm">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-[#00ff88]" /> Notifications
+            <Bell className="w-4 h-4 text-[#24d18f]" /> Notifications
           </SheetTitle>
         </SheetHeader>
         <div className="mt-6 space-y-2">
@@ -86,9 +86,9 @@ export default function NotificationBell({ onNavigate }) {
                 onClick={() => handleClick(n)}
                 className={`w-full text-left rounded-xl p-3 flex gap-3 transition ${n.read
                   ? 'bg-white/[0.02] hover:bg-white/[0.05]'
-                  : 'bg-[#00ff88]/[0.06] border border-[#00ff88]/15 hover:bg-[#00ff88]/[0.08]'}`}
+                  : 'bg-[#24d18f]/[0.06] border border-[#24d18f]/15 hover:bg-[#24d18f]/[0.08]'}`}
               >
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${n.read ? 'bg-white/5 text-white/50' : 'bg-[#00ff88]/15 text-[#00ff88]'}`}>
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${n.read ? 'bg-white/5 text-white/50' : 'bg-[#24d18f]/15 text-[#24d18f]'}`}>
                   <Ic className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">

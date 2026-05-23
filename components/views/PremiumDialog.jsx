@@ -62,7 +62,7 @@ export default function PremiumDialog({ open, onOpenChange, onUpgraded }) {
                 <div className="text-sm font-semibold">{f.t}</div>
                 <div className="text-xs text-white/55">{f.d}</div>
               </div>
-              <Check className="w-4 h-4 text-[#00ff88]" />
+              <Check className="w-4 h-4 text-[#24d18f]" />
             </div>
           ))}
         </div>
@@ -84,7 +84,7 @@ export default function PremiumDialog({ open, onOpenChange, onUpgraded }) {
         </div>
 
         {tier === 'pro' ? (
-          <Button disabled className="bg-[#00ff88]/60 text-black font-semibold h-11">
+          <Button disabled className="bg-[#24d18f]/60 text-black font-semibold h-11">
             <Check className="w-4 h-4 mr-2" /> You are on Pro
           </Button>
         ) : (

@@ -1,32 +1,31 @@
 import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 
-const LOGO = 'https://customer-assets.emergentagent.com/job_workout-match-19/artifacts/u3kk6eqv_file_00000000e428720badf6b7f599a3a7f4.png'
+const OG_IMAGE = '/opengraph-image'
 
 export const metadata = {
   metadataBase: new URL('https://trainr.in'),
-  title: 'Trainr — Your Fitness Accountability Network',
-  description: 'Build your fitness network. Find verified workout partners nearby — matched by gym, goals, schedule and experience. A premium, safety-first fitness community platform.',
-  keywords: ['fitness network', 'gym partner', 'workout partner', 'training partner', 'fitness community', 'accountability partner', 'gym networking', 'trainr', 'trainr.in'],
+  title: 'Trainr — Built for accountability, not dating',
+  description: "Find verified gym partners nearby, matched by goals, schedule and experience. India's premium fitness accountability network.",
   icons: {
-    icon: [{ url: LOGO, type: 'image/png' }],
-    apple: [{ url: LOGO }],
-    shortcut: [{ url: LOGO }],
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    apple: [{ url: '/apple-touch-icon.svg' }],
+    shortcut: [{ url: '/favicon.svg' }],
   },
   openGraph: {
-    title: 'Trainr — Your Fitness Accountability Network',
-    description: 'Find verified workout partners nearby. Built for accountability, not dating.',
+    title: 'Trainr — Built for accountability, not dating',
+    description: "Find verified gym partners nearby, matched by goals, schedule and experience. India's premium fitness accountability network.",
     url: 'https://trainr.in',
     siteName: 'Trainr',
-    images: [{ url: LOGO, width: 1024, height: 1024 }],
+    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: 'Trainr accountability network' }],
     locale: 'en_US',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Trainr',
-    description: 'Your fitness accountability network',
-    images: [LOGO],
+    title: 'Trainr — Built for accountability, not dating',
+    description: "Find verified gym partners nearby, matched by goals, schedule and experience. India's premium fitness accountability network.",
+    images: [OG_IMAGE],
   },
 }
 
@@ -37,9 +36,14 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-        <script dangerouslySetInnerHTML={{__html:'window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);'}} />
+        <script dangerouslySetInnerHTML={{ __html: 'window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);' }} />
       </head>
       <body>
+        <noscript>
+          <div style={{ padding: 16, textAlign: 'center', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            Trainr needs JavaScript to help you find and message verified gym partners.
+          </div>
+        </noscript>
         {children}
         <Toaster theme="dark" position="top-center" richColors closeButton />
       </body>

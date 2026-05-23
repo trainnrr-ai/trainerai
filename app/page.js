@@ -19,6 +19,7 @@ import {
   Dumbbell, MapPin, Clock, Target, MessageCircle, Heart, X, ChevronRight,
   Sparkles, Users, Lock, AlertTriangle, Instagram, Send, Filter, ArrowLeft, LogOut,
   Flame, ArrowRight, Loader2, Camera, Bell, Navigation, Zap, Crown, ChevronLeft, Check, RefreshCw,
+  Phone,
 } from 'lucide-react'
 
 // Shared constants & utilities
@@ -42,13 +43,14 @@ import ReportDialog from '@/components/views/ReportDialog'
 
 // Premium UI is hidden by default — flip NEXT_PUBLIC_PREMIUM_ENABLED=true to expose Pro CTA + Settings card.
 const PREMIUM_ENABLED = process.env.NEXT_PUBLIC_PREMIUM_ENABLED === 'true'
+const FIREBASE_AUTH_ENABLED = process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'firebase'
 
 function Navbar({ user, view, setView, onOpenPremium, pendingIncomingCount = 0 }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-strong">
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         <button onClick={() => setView(user ? 'discover' : 'landing')} className="flex items-center gap-2 group">
-          <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl overflow-hidden bg-black border border-[#00ff88]/25 group-hover:border-[#00ff88]/50 transition">
+          <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl overflow-hidden bg-black border border-[#24d18f]/25 group-hover:border-[#24d18f]/50 transition">
             <img src={LOGO} alt="Trainr" className="w-full h-full object-cover" loading="eager" decoding="async" />
           </div>
           <span className="text-lg md:text-xl font-extrabold tracking-tight">Trainr</span>
@@ -59,7 +61,7 @@ function Navbar({ user, view, setView, onOpenPremium, pendingIncomingCount = 0 }
             <button onClick={() => setView('matches')} className={`relative px-3 py-2 rounded-lg text-sm font-medium transition ${view === 'matches' || view === 'chat' ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>
               Connections
               {pendingIncomingCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#00ff88] text-black text-[10px] font-extrabold flex items-center justify-center ring-2 ring-background">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#24d18f] text-black text-[10px] font-extrabold flex items-center justify-center ring-2 ring-background">
                   {pendingIncomingCount > 9 ? '9+' : pendingIncomingCount}
                 </span>
               )}
@@ -71,25 +73,25 @@ function Navbar({ user, view, setView, onOpenPremium, pendingIncomingCount = 0 }
               </button>
             )}
             {user.isAdmin && (
-              <button onClick={() => setView('admin')} title="Admin" className={`w-9 h-9 rounded-lg flex items-center justify-center transition ${view === 'admin' ? 'bg-[#00ff88]/15 text-[#00ff88]' : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'}`}>
+              <button onClick={() => setView('admin')} title="Admin" className={`w-9 h-9 rounded-lg flex items-center justify-center transition ${view === 'admin' ? 'bg-[#24d18f]/15 text-[#24d18f]' : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'}`}>
                 <Crown className="w-4 h-4" />
               </button>
             )}
-            <button onClick={() => setView('settings')} className="ml-1 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition overflow-hidden ring-1 ring-white/10 hover:ring-[#00ff88]/40">
+            <button onClick={() => setView('settings')} className="ml-1 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition overflow-hidden ring-1 ring-white/10 hover:ring-[#24d18f]/40">
               <Avatar className="w-9 h-9">
                 <AvatarImage src={user.picture} />
-                <AvatarFallback className="bg-[#00ff88]/20 text-[#00ff88] text-xs font-semibold">{(user.name || 'U').slice(0,1)}</AvatarFallback>
+                <AvatarFallback className="bg-[#24d18f]/20 text-[#24d18f] text-xs font-semibold">{(user.name || 'U').slice(0,1)}</AvatarFallback>
               </Avatar>
             </button>
           </nav>
         ) : (
           <div className="flex items-center gap-2 md:gap-3">
-            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" title="Follow @trainr.in" className="hidden sm:flex w-9 h-9 rounded-lg items-center justify-center text-white/60 hover:text-[#00ff88] hover:bg-white/5 transition">
+            <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" title="Follow @trainr.in" className="hidden sm:flex w-9 h-9 rounded-lg items-center justify-center text-white/60 hover:text-[#24d18f] hover:bg-white/5 transition">
               <Instagram className="w-4 h-4" />
             </a>
             <button onClick={() => setView('about')} className="hidden md:inline-flex px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition">About</button>
             <button onClick={() => setView('contact')} className="hidden md:inline-flex px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition">Contact</button>
-            <Button onClick={loginWithGoogle} className="bg-[#00ff88] hover:bg-[#00cc6a] active:scale-[0.98] text-black font-semibold rounded-full px-4 md:px-5 h-9 md:h-10 transition">Get Started</Button>
+            <Button onClick={loginWithGoogle} className="bg-[#24d18f] hover:bg-[#17b978] active:scale-[0.98] text-black font-semibold rounded-full px-4 md:px-5 h-9 md:h-10 transition">Get Started</Button>
           </div>
         )}
       </div>
@@ -232,7 +234,7 @@ function ProfileEditor({ user, profile, onSaved }) {
             </Field>
           </Card>
 
-          <Button onClick={submit} disabled={saving} size="lg" className="w-full bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full h-12">
+          <Button onClick={submit} disabled={saving} size="lg" className="w-full bg-[#24d18f] hover:bg-[#17b978] text-black font-semibold rounded-full h-12">
             {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>
@@ -258,11 +260,11 @@ function ProfileEditor({ user, profile, onSaved }) {
       <div className="max-w-xl mx-auto px-4 md:px-6">
         <div className="mb-8">
           <div className="flex items-center justify-between text-xs text-white/50 mb-2">
-            <span className="uppercase tracking-wider font-semibold text-[#00ff88]">{cur.kicker}</span>
+            <span className="uppercase tracking-wider font-semibold text-[#24d18f]">{cur.kicker}</span>
             <span>{Math.round(progressPct)}% complete</span>
           </div>
           <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-[#00ff88] to-[#00cc6a] transition-all duration-500 ease-out" style={{ width: `${progressPct}%` }} />
+            <div className="h-full bg-gradient-to-r from-[#24d18f] to-[#17b978] transition-all duration-500 ease-out" style={{ width: `${progressPct}%` }} />
           </div>
         </div>
 
@@ -327,7 +329,7 @@ function ProfileEditor({ user, profile, onSaved }) {
                     <Input value={form.instagram} onChange={e => update('instagram', e.target.value.replace('@',''))} placeholder="username" className="bg-transparent border-0 px-0 focus-visible:ring-0" />
                   </div>
                 </Field>
-                <div className="rounded-xl bg-[#00ff88]/5 border border-[#00ff88]/20 p-4 text-sm text-white/75 leading-relaxed">
+                <div className="rounded-xl bg-[#24d18f]/5 border border-[#24d18f]/20 p-4 text-sm text-white/75 leading-relaxed">
                   By continuing you agree to Trainr\u2019s safety-first community guidelines: zero tolerance for harassment, sexual content or fake profiles.
                 </div>
               </Card>
@@ -341,7 +343,7 @@ function ProfileEditor({ user, profile, onSaved }) {
               <ChevronLeft className="w-4 h-4 mr-1" /> Back
             </Button>
           )}
-          <Button onClick={next} disabled={saving} className="flex-1 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full h-12 active:scale-[0.99] transition">
+          <Button onClick={next} disabled={saving} className="flex-1 bg-[#24d18f] hover:bg-[#17b978] text-black font-semibold rounded-full h-12 active:scale-[0.99] transition">
             {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating profile…</> : (step === totalSteps - 1 ? <>Finish & Discover Partners <ArrowRight className="w-4 h-4 ml-2" /></> : <>Continue <ArrowRight className="w-4 h-4 ml-2" /></>)}
           </Button>
         </div>
@@ -372,16 +374,16 @@ function GoalsMultiSelect({ value, onChange, max = 3 }) {
               onClick={() => toggle(g)}
               className={`text-left p-3.5 rounded-2xl border transition-all duration-200 active:scale-[0.98] ${
                 selected
-                  ? 'bg-[#00ff88]/12 border-[#00ff88]/55 text-white pending-halo'
+                  ? 'bg-[#24d18f]/12 border-[#24d18f]/55 text-white pending-halo'
                   : 'bg-white/[0.03] border-white/10 text-white/85 hover:bg-white/[0.06] hover:border-white/20'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selected ? 'bg-[#00ff88]/25 text-[#00ff88]' : 'bg-white/5 text-white/45'}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selected ? 'bg-[#24d18f]/25 text-[#24d18f]' : 'bg-white/5 text-white/45'}`}>
                   <Target className="w-4 h-4" />
                 </div>
                 <span className="font-semibold text-sm flex-1 leading-tight">{g}</span>
-                {selected && <Check className="w-4 h-4 text-[#00ff88] flex-shrink-0" />}
+                {selected && <Check className="w-4 h-4 text-[#24d18f] flex-shrink-0" />}
               </div>
             </button>
           )
@@ -429,9 +431,9 @@ function PhotoEditorCard({ photos, setPhotos, photoUrl, setPhotoUrl, addPhoto, h
               onDrop={(e) => { e.preventDefault(); if (dragIdx !== null) moveTo(dragIdx, i); setDragIdx(null); setOverIdx(null) }}
               onDragEnd={() => { setDragIdx(null); setOverIdx(null) }}
               className={`relative aspect-[3/4] rounded-xl overflow-hidden bg-white/5 border transition-all duration-150 group cursor-grab active:cursor-grabbing
-                ${isMain ? 'border-[#00ff88]/60 pending-halo' : 'border-white/10'}
+                ${isMain ? 'border-[#24d18f]/60 pending-halo' : 'border-white/10'}
                 ${dragIdx === i ? 'opacity-50 scale-95' : ''}
-                ${isOver ? 'ring-2 ring-[#00ff88]/70 scale-[1.02]' : ''}`}
+                ${isOver ? 'ring-2 ring-[#24d18f]/70 scale-[1.02]' : ''}`}
             >
               <img src={p} alt="" className="w-full h-full object-cover pointer-events-none" />
               {/* Top-right: Delete */}
@@ -440,13 +442,13 @@ function PhotoEditorCard({ photos, setPhotos, photoUrl, setPhotoUrl, addPhoto, h
               </button>
               {/* Bottom-left: Main badge / Set-as-main */}
               {isMain ? (
-                <Badge className="absolute bottom-1.5 left-1.5 bg-[#00ff88] text-black text-[10px] py-0 font-bold tracking-wide z-10">MAIN</Badge>
+                <Badge className="absolute bottom-1.5 left-1.5 bg-[#24d18f] text-black text-[10px] py-0 font-bold tracking-wide z-10">MAIN</Badge>
               ) : (
                 <button
                   type="button"
                   onClick={() => setAsMain(i)}
                   title="Set as main photo"
-                  className="absolute bottom-1.5 left-1.5 rounded-md bg-black/70 backdrop-blur px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white/85 hover:bg-black/90 hover:text-[#00ff88] transition z-10"
+                  className="absolute bottom-1.5 left-1.5 rounded-md bg-black/70 backdrop-blur px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white/85 hover:bg-black/90 hover:text-[#24d18f] transition z-10"
                 >
                   Set main
                 </button>
@@ -454,12 +456,12 @@ function PhotoEditorCard({ photos, setPhotos, photoUrl, setPhotoUrl, addPhoto, h
               {/* Bottom-right: Up/Down chevrons (mobile-friendly reorder fallback) */}
               <div className="absolute bottom-1.5 right-1.5 flex flex-col gap-0.5 z-10">
                 {i > 0 && (
-                  <button type="button" onClick={() => moveUp(i)} className="w-6 h-6 rounded-md bg-black/70 backdrop-blur flex items-center justify-center hover:bg-black/90 hover:text-[#00ff88]" aria-label="Move up">
+                  <button type="button" onClick={() => moveUp(i)} className="w-6 h-6 rounded-md bg-black/70 backdrop-blur flex items-center justify-center hover:bg-black/90 hover:text-[#24d18f]" aria-label="Move up">
                     <ChevronLeft className="w-3.5 h-3.5 -rotate-90" />
                   </button>
                 )}
                 {i < photos.length - 1 && (
-                  <button type="button" onClick={() => moveDown(i)} className="w-6 h-6 rounded-md bg-black/70 backdrop-blur flex items-center justify-center hover:bg-black/90 hover:text-[#00ff88]" aria-label="Move down">
+                  <button type="button" onClick={() => moveDown(i)} className="w-6 h-6 rounded-md bg-black/70 backdrop-blur flex items-center justify-center hover:bg-black/90 hover:text-[#24d18f]" aria-label="Move down">
                     <ChevronLeft className="w-3.5 h-3.5 rotate-90" />
                   </button>
                 )}
@@ -468,7 +470,7 @@ function PhotoEditorCard({ photos, setPhotos, photoUrl, setPhotoUrl, addPhoto, h
           )
         })}
         {photos.length < 5 && (
-          <label className="aspect-[3/4] rounded-xl border-2 border-dashed border-white/15 flex flex-col items-center justify-center text-white/40 hover:border-[#00ff88]/50 hover:text-[#00ff88] transition cursor-pointer">
+          <label className="aspect-[3/4] rounded-xl border-2 border-dashed border-white/15 flex flex-col items-center justify-center text-white/40 hover:border-[#24d18f]/50 hover:text-[#24d18f] transition cursor-pointer">
             <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
             <span className="text-3xl leading-none">+</span>
             <span className="text-[10px] uppercase tracking-wider mt-1">Add photo</span>
@@ -495,16 +497,16 @@ function ChoiceGrid({ options, value, onChange, icon: Icon, large }) {
             onClick={() => onChange(opt)}
             className={`text-left p-4 rounded-2xl border transition-all duration-200 active:scale-[0.99] ${
               selected
-                ? 'bg-[#00ff88]/10 border-[#00ff88]/50 text-white shadow-[0_0_0_1px_rgba(0,255,136,0.2)]'
+                ? 'bg-[#24d18f]/10 border-[#24d18f]/50 text-white shadow-[0_0_0_1px_rgba(0,255,136,0.2)]'
                 : 'bg-white/[0.03] border-white/10 text-white/85 hover:bg-white/[0.06] hover:border-white/20'
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selected ? 'bg-[#00ff88]/20 text-[#00ff88]' : 'bg-white/5 text-white/50'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selected ? 'bg-[#24d18f]/20 text-[#24d18f]' : 'bg-white/5 text-white/50'}`}>
                 {Icon && <Icon className="w-5 h-5" />}
               </div>
               <span className="font-semibold flex-1">{opt}</span>
-              {selected && <Check className="w-5 h-5 text-[#00ff88]" />}
+              {selected && <Check className="w-5 h-5 text-[#24d18f]" />}
             </div>
           </button>
         )
@@ -516,16 +518,37 @@ function ChoiceGrid({ options, value, onChange, icon: Icon, large }) {
 function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const [pending, setPending] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  
   const photos = profile.photos || []
-  const triggerConnect = () => {
+  
+  const triggerConnect = (e) => {
+    e?.stopPropagation?.()
     if (pending) return
     setPending(true)
-    // Allow the 220ms glow animation to play, then propagate (parent removes the card)
-    setTimeout(() => onLike(profile), 200)
+    setTimeout(() => {
+      setSheetOpen(false)
+      onLike(profile)
+    }, 200)
   }
+  
+  const triggerSkip = (e) => {
+    e?.stopPropagation?.()
+    setSheetOpen(false)
+    onSkip(profile)
+  }
+  
+  const triggerReport = (e) => {
+    e?.stopPropagation?.()
+    onReport(profile)
+  }
+
   return (
     <div className="snap-start min-h-[calc(100vh-4rem)] flex items-center py-3 md:py-6 fade-up" style={{ animationDelay: `${Math.min(index * 0.05, 0.3)}s` }}>
-      <Card className="glass-strong border-white/10 overflow-hidden w-full max-w-md mx-auto rounded-3xl shadow-2xl shadow-black/30 hover:border-white/15 transition-colors">
+      <Card 
+        onClick={() => setSheetOpen(true)}
+        className="glass-strong border-white/10 overflow-hidden w-full max-w-md mx-auto rounded-3xl shadow-2xl shadow-black/30 hover:border-white/15 transition-colors cursor-pointer"
+      >
         <div className="relative aspect-[4/5] bg-white/[0.03]">
           <SmartImg src={photos[photoIdx]} alt={profile.name} className="w-full h-full" />
 
@@ -537,13 +560,10 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
             </div>
           )}
 
-          <button onClick={() => setPhotoIdx(i => Math.max(0, i-1))} className="absolute left-0 top-0 w-1/3 h-full z-[5]" aria-label="Previous photo" />
-          <button onClick={() => setPhotoIdx(i => Math.min(photos.length-1, i+1))} className="absolute right-0 top-0 w-1/3 h-full z-[5]" aria-label="Next photo" />
+          <button onClick={(e) => { e.stopPropagation(); setPhotoIdx(i => Math.max(0, i-1)) }} className="absolute left-0 top-0 w-1/3 h-full z-[5]" aria-label="Previous photo" />
+          <button onClick={(e) => { e.stopPropagation(); setPhotoIdx(i => Math.min(photos.length-1, i+1)) }} className="absolute right-0 top-0 w-1/3 h-full z-[5]" aria-label="Next photo" />
 
-          {/* PRIVACY: last-active / online presence is intentionally hidden from non-connected users.
-              It only appears in Chat after a mutual connection is established. */}
-
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent p-5 pt-20 z-[6]">
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent p-5 pt-20 z-[6] pointer-events-none">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-2xl md:text-[26px] font-extrabold leading-tight">{profile.name}<span className="text-white/70 font-bold">, {profile.age}</span></h3>
               <VerificationBadge verified={profile.verified} />
@@ -556,54 +576,152 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
               {profile.distanceKm != null && (
                 <>
                   <span className="text-white/30">·</span>
-                  <span className="text-[#00ff88] font-medium flex items-center gap-1"><Navigation className="w-3 h-3" />{profile.distanceKm} km</span>
+                  <span className="text-[#24d18f] font-medium flex items-center gap-1"><Navigation className="w-3 h-3" />{profile.distanceKm} km</span>
                 </>
               )}
             </div>
             <div className="flex flex-wrap gap-1.5 mt-3">
               {((profile.goals && profile.goals.length) ? profile.goals : (profile.goal ? [profile.goal] : [])).map(g => (
-                <Badge key={g} className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30 hover:bg-[#00ff88]/15 font-semibold">{g}</Badge>
+                <Badge key={g} className="bg-[#24d18f]/15 text-[#24d18f] border-[#24d18f]/30 hover:bg-[#24d18f]/15 font-semibold pointer-events-auto">{g}</Badge>
               ))}
-              <Badge variant="outline" className="bg-white/10 text-white border-white/15 hover:bg-white/15">{profile.level}</Badge>
-              <Badge variant="outline" className="bg-white/10 text-white border-white/15 hover:bg-white/15"><Clock className="w-3 h-3 mr-1" />{profile.timing}</Badge>
+              <Badge variant="outline" className="bg-white/10 text-white border-white/15 hover:bg-white/15 pointer-events-auto">{profile.level}</Badge>
+              <Badge variant="outline" className="bg-white/10 text-white border-white/15 hover:bg-white/15 pointer-events-auto"><Clock className="w-3 h-3 mr-1" />{profile.timing}</Badge>
             </div>
           </div>
         </div>
 
-        <div className="p-5 md:p-6">
+        <div className="p-5 md:p-6 relative z-10">
           {profile.matchReasons && profile.matchReasons.length > 0 && (
-            <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            <div className="mb-3 flex flex-wrap items-center gap-1.5 pointer-events-none">
               <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mr-1">Why this match</span>
               {profile.matchReasons.map(r => (
-                <span key={r.key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#00ff88]/10 border border-[#00ff88]/20 text-[#00ff88] text-[11px] font-semibold">
+                <span key={r.key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#24d18f]/10 border border-[#24d18f]/20 text-[#24d18f] text-[11px] font-semibold">
                   <Sparkles className="w-2.5 h-2.5" /> {r.label}
                 </span>
               ))}
             </div>
           )}
-          {profile.bio && <p className="text-[15px] text-white/85 leading-[1.55]">{profile.bio}</p>}
+          {profile.bio && <p className="text-[15px] text-white/85 leading-[1.55] pointer-events-none">{profile.bio}</p>}
           {profile.instagram && (
-            <a href={`https://instagram.com/${profile.instagram}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-white/55 mt-3 hover:text-[#00ff88] transition">
+            <a href={`https://instagram.com/${profile.instagram}`} onClick={e => e.stopPropagation()} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-white/55 mt-3 hover:text-[#24d18f] transition relative z-20">
               <Instagram className="w-3.5 h-3.5" /> @{profile.instagram}
             </a>
           )}
-          <div className="grid grid-cols-[1fr_2fr_1fr] gap-2 mt-5">
-            <Button onClick={() => onSkip(profile)} variant="outline" className="rounded-xl bg-white/5 border-white/10 hover:bg-white/10 active:scale-95 h-12 transition" aria-label="Skip">
+          <div className="grid grid-cols-[1fr_2fr_1fr] gap-2 mt-5 relative z-20">
+            <Button onClick={triggerSkip} variant="outline" className="rounded-xl bg-white/5 border-white/10 hover:bg-white/10 active:scale-95 h-12 transition" aria-label="Skip">
               <X className="w-5 h-5" />
             </Button>
-            <Button onClick={triggerConnect} disabled={pending} className={`rounded-xl bg-[#00ff88] hover:bg-[#00cc6a] active:scale-[0.98] text-black font-semibold h-12 transition shadow-lg shadow-[#00ff88]/20 disabled:opacity-100 ${pending ? 'connect-ping pending-halo' : ''}`}>
+            <Button onClick={triggerConnect} disabled={pending} className={`rounded-xl bg-[#24d18f] hover:bg-[#17b978] active:scale-[0.98] text-black font-semibold h-12 transition shadow-lg shadow-[#24d18f]/20 disabled:opacity-100 ${pending ? 'connect-ping pending-halo' : ''}`}>
               {pending ? (
                 <><Check className="w-[18px] h-[18px] mr-1.5" /> Pending</>
               ) : (
                 <><Heart className="w-[18px] h-[18px] mr-1.5 fill-black" /> Connect</>
               )}
             </Button>
-            <Button onClick={() => onReport(profile)} variant="outline" className="rounded-xl bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 active:scale-95 h-12 transition" aria-label="Report">
+            <Button onClick={triggerReport} variant="outline" className="rounded-xl bg-white/5 border-white/10 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 active:scale-95 h-12 transition" aria-label="Report">
               <AlertTriangle className="w-5 h-5" />
             </Button>
           </div>
         </div>
       </Card>
+
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="bottom" className="h-[90vh] bg-[#0a0b0d] border-white/10 rounded-t-3xl overflow-y-auto p-0 z-[100]">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Profile Detail</SheetTitle>
+          </SheetHeader>
+          <div className="relative">
+            <div className="w-full aspect-[4/5] sm:aspect-square relative">
+              <SmartImg src={photos[0]} alt={profile.name} className="w-full h-full" />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0a0b0d] to-transparent h-32" />
+            </div>
+            
+            <div className="px-5 pb-32 -mt-10 relative z-10 space-y-6">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-3xl font-extrabold">{profile.name}<span className="text-white/70 font-bold">, {profile.age}</span></h2>
+                  <VerificationBadge verified={profile.verified} />
+                </div>
+                <div className="flex items-center gap-1.5 text-sm text-white/70 mt-1">
+                  <MapPin className="w-4 h-4" />
+                  <span>{profile.city}</span>
+                  <span className="text-white/30">·</span>
+                  <span className="text-white/85 font-medium">{profile.gymName}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                  <div className="text-xs text-white/50 mb-1 uppercase tracking-wider font-semibold">Experience</div>
+                  <div className="font-medium flex items-center gap-2"><Zap className="w-4 h-4 text-[#24d18f]" /> {profile.level}</div>
+                </div>
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                  <div className="text-xs text-white/50 mb-1 uppercase tracking-wider font-semibold">Timing</div>
+                  <div className="font-medium flex items-center gap-2"><Clock className="w-4 h-4 text-[#24d18f]" /> {profile.timing}</div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm uppercase tracking-wider text-white/50 font-semibold mb-3">Goals</h3>
+                <div className="flex flex-wrap gap-2">
+                  {((profile.goals && profile.goals.length) ? profile.goals : (profile.goal ? [profile.goal] : [])).map(g => (
+                    <Badge key={g} className="bg-[#24d18f]/15 text-[#24d18f] border-[#24d18f]/30 px-3 py-1 text-sm">{g}</Badge>
+                  ))}
+                </div>
+              </div>
+
+              {profile.bio && (
+                <div>
+                  <h3 className="text-sm uppercase tracking-wider text-white/50 font-semibold mb-2">About</h3>
+                  <p className="text-white/85 leading-relaxed text-[15px] whitespace-pre-wrap">{profile.bio}</p>
+                </div>
+              )}
+
+              {profile.instagram && (
+                <div>
+                  <h3 className="text-sm uppercase tracking-wider text-white/50 font-semibold mb-2">Social</h3>
+                  <a href={`https://instagram.com/${profile.instagram}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition text-white">
+                    <Instagram className="w-4 h-4 text-pink-400" /> @{profile.instagram}
+                  </a>
+                </div>
+              )}
+              
+              {profile.matchReasons && profile.matchReasons.length > 0 && (
+                <div className="bg-[#24d18f]/10 rounded-2xl p-4 border border-[#24d18f]/20">
+                  <div className="text-xs text-[#24d18f] uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Why you're a match</div>
+                  <div className="flex flex-col gap-1.5">
+                    {profile.matchReasons.map(r => (
+                      <div key={r.key} className="text-sm text-white/85 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#24d18f]/50" /> {r.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="fixed bottom-0 inset-x-0 p-4 bg-gradient-to-t from-[#0a0b0d] via-[#0a0b0d]/95 to-transparent z-20">
+              <div className="max-w-md mx-auto grid grid-cols-[1fr_2fr] gap-3">
+                <Button onClick={triggerSkip} variant="outline" className="rounded-2xl bg-white/5 border-white/10 hover:bg-white/10 active:scale-95 h-14 transition w-full" aria-label="Skip">
+                  <X className="w-6 h-6" />
+                </Button>
+                <Button onClick={triggerConnect} disabled={pending} className={`rounded-2xl bg-[#24d18f] hover:bg-[#17b978] active:scale-[0.98] text-black font-semibold h-14 transition shadow-lg shadow-[#24d18f]/20 disabled:opacity-100 w-full text-lg ${pending ? 'connect-ping pending-halo' : ''}`}>
+                  {pending ? (
+                    <><Check className="w-5 h-5 mr-2" /> Pending</>
+                  ) : (
+                    <><Heart className="w-5 h-5 mr-2 fill-black" /> Connect</>
+                  )}
+                </Button>
+              </div>
+              <div className="max-w-md mx-auto text-center mt-3">
+                <button onClick={triggerReport} className="text-xs text-white/40 hover:text-red-400 transition flex items-center justify-center gap-1 mx-auto">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Report {profile.name}
+                </button>
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
@@ -645,7 +763,7 @@ function FiltersSheet({ filters, setFilters, onApply }) {
                     key={g} type="button" onClick={() => toggleGoal(g)}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150 ${
                       sel
-                        ? 'bg-[#00ff88]/15 border-[#00ff88]/55 text-[#00ff88] pending-halo'
+                        ? 'bg-[#24d18f]/15 border-[#24d18f]/55 text-[#24d18f] pending-halo'
                         : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white'
                     }`}
                   >
@@ -679,7 +797,7 @@ function FiltersSheet({ filters, setFilters, onApply }) {
               type="range" min={0} max={50} step={5}
               value={local.maxDistance || 0}
               onChange={e => set('maxDistance', parseInt(e.target.value, 10))}
-              className="w-full accent-[#00ff88]"
+              className="w-full accent-[#24d18f]"
             />
             <div className="flex justify-between text-[10px] text-white/40 mt-1"><span>0 km</span><span>5</span><span>15</span><span>30</span><span>50+ (any)</span></div>
           </Field>
@@ -689,7 +807,7 @@ function FiltersSheet({ filters, setFilters, onApply }) {
           </div>
           <div className="flex gap-2 pt-4">
             <Button onClick={() => { setLocal(blankFilters); setFilters(blankFilters); onApply?.(blankFilters) }} variant="outline" className="flex-1 bg-white/5 border-white/10">Reset</Button>
-            <Button onClick={() => { setFilters(local); onApply?.(local) }} className="flex-1 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold">Apply</Button>
+            <Button onClick={() => { setFilters(local); onApply?.(local) }} className="flex-1 bg-[#24d18f] hover:bg-[#17b978] text-black font-semibold">Apply</Button>
           </div>
         </div>
       </SheetContent>
@@ -700,8 +818,11 @@ function FiltersSheet({ filters, setFilters, onApply }) {
 function Discover() {
   const [filters, setFilters] = useState({ city: '', gym: '', goals: [], timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0, ageMin: 0, ageMax: 0 })
   const [profiles, setProfiles] = useState(null)
+  const [pagination, setPagination] = useState({ hasMore: false, nextOffset: 0, total: 0 })
+  const [loadingMore, setLoadingMore] = useState(false)
   const [reportProfile, setReportProfile] = useState(null)
   const [showLocPrompt, setShowLocPrompt] = useState(false)
+  const loadMoreRef = useRef(null)
 
   useEffect(() => {
     try {
@@ -732,9 +853,14 @@ function Discover() {
   }
   const dismissLoc = () => { try { localStorage.setItem('trainr_loc_decided', '1') } catch {}; setShowLocPrompt(false) }
 
-  const load = async (f = filters) => {
-    setProfiles(null)
+  const load = async (f = filters, opts = {}) => {
+    const append = !!opts.append
+    const offset = append ? pagination.nextOffset : 0
+    if (append) setLoadingMore(true)
+    else setProfiles(null)
     const params = new URLSearchParams()
+    params.set('limit', '20')
+    params.set('offset', String(offset))
     Object.entries(f).forEach(([k, v]) => {
       if (v == null || v === '' || v === 0) return
       if (Array.isArray(v)) {
@@ -743,12 +869,31 @@ function Discover() {
       }
       params.append(k, String(v))
     })
-    const res = await fetch('/api/profiles/discover?' + params.toString(), { credentials: 'include' })
-    const data = await res.json()
-    setProfiles(data.profiles || [])
+    try {
+      const res = await fetch('/api/profiles/discover?' + params.toString(), { credentials: 'include' })
+      const data = await res.json()
+      const nextProfiles = data.profiles || []
+      setProfiles(prev => append ? [...(prev || []), ...nextProfiles.filter(p => !(prev || []).some(x => x.id === p.id))] : nextProfiles)
+      setPagination(data.pagination || { hasMore: false, nextOffset: 0, total: nextProfiles.length })
+    } catch {
+      if (!append) setProfiles([])
+      toast.error('Could not load Discover')
+    } finally {
+      setLoadingMore(false)
+    }
   }
 
   useEffect(() => { load() }, []) // eslint-disable-line
+
+  useEffect(() => {
+    const node = loadMoreRef.current
+    if (!node || !profiles || !pagination.hasMore || loadingMore) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) load(filters, { append: true })
+    }, { rootMargin: '700px 0px' })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [profiles, pagination.hasMore, pagination.nextOffset, loadingMore, filters]) // eslint-disable-line
 
   const handleConnect = async (p) => {
     // Optimistic: remove the card from the feed immediately
@@ -790,9 +935,9 @@ function Discover() {
       <div className="sticky top-16 z-30 glass-strong border-b border-white/10">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#00ff88]" />
+            <Sparkles className="w-4 h-4 text-[#24d18f]" />
             <span className="text-sm font-semibold">Discover</span>
-            {profiles && <span className="text-xs text-white/50">· {profiles.length} nearby</span>}
+            {profiles && <span className="text-xs text-white/50">· {pagination.total || profiles.length} profiles</span>}
           </div>
           <FiltersSheet filters={filters} setFilters={setFilters} onApply={(f) => load(f)} />
         </div>
@@ -801,14 +946,14 @@ function Discover() {
       {showLocPrompt && (
         <div className="max-w-md mx-auto px-4 pt-4">
           <div className="glass border-white/10 rounded-2xl p-4 flex items-start gap-3 fade-up">
-            <div className="w-9 h-9 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20 flex items-center justify-center flex-shrink-0">
-              <Navigation className="w-4 h-4 text-[#00ff88]" />
+            <div className="w-9 h-9 rounded-lg bg-[#24d18f]/10 border border-[#24d18f]/20 flex items-center justify-center flex-shrink-0">
+              <Navigation className="w-4 h-4 text-[#24d18f]" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold">See partners near you</div>
               <div className="text-xs text-white/55 mt-0.5">Allow location for distance-based discovery. We never share your exact location.</div>
               <div className="flex gap-2 mt-3">
-                <Button onClick={enableLocation} size="sm" className="bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold h-8 text-xs">Allow location</Button>
+                <Button onClick={enableLocation} size="sm" className="bg-[#24d18f] hover:bg-[#17b978] text-black font-semibold h-8 text-xs">Allow location</Button>
                 <Button onClick={dismissLoc} size="sm" variant="outline" className="bg-white/5 border-white/10 h-8 text-xs">Use city only</Button>
               </div>
             </div>
@@ -840,6 +985,14 @@ function Discover() {
         {profiles?.map(p => (
           <ProfileCard key={p.id} profile={p} onLike={handleConnect} onSkip={handleSkip} onReport={setReportProfile} />
         ))}
+        {profiles && pagination.hasMore && (
+          <div ref={loadMoreRef} className="py-6">
+            <div className="rounded-2xl glass border-white/10 p-4 flex items-center justify-center gap-2 text-sm text-white/55">
+              <Loader2 className={`w-4 h-4 text-[#24d18f] ${loadingMore ? 'animate-spin' : ''}`} />
+              {loadingMore ? 'Loading more partners...' : 'Scroll for more partners'}
+            </div>
+          </div>
+        )}
       </div>
 
       <ReportDialog
@@ -865,11 +1018,11 @@ function EmptyDiscover({ onResetFilters }) {
   }
   return (
     <div className="text-center py-20 fade-up max-w-sm mx-auto">
-      <div className="w-20 h-20 rounded-3xl bg-[#00ff88]/10 border border-[#00ff88]/20 flex items-center justify-center mx-auto mb-5 text-4xl">💪</div>
+      <div className="w-20 h-20 rounded-3xl bg-[#24d18f]/10 border border-[#24d18f]/20 flex items-center justify-center mx-auto mb-5 text-4xl">💪</div>
       <h3 className="text-2xl font-extrabold tracking-tight">No workout partners nearby yet</h3>
       <p className="text-white/60 mt-2 text-sm leading-relaxed">Be the first athlete in your area. Invite a gym buddy to join and the feed comes alive.</p>
       <div className="flex flex-col gap-2 mt-6">
-        <Button onClick={inviteFriends} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold rounded-full h-11">
+        <Button onClick={inviteFriends} className="bg-[#24d18f] hover:bg-[#17b978] text-black font-semibold rounded-full h-11">
           <Send className="w-4 h-4 mr-2" /> Invite Friends
         </Button>
         <Button onClick={onResetFilters} variant="outline" className="bg-white/5 border-white/10 rounded-full h-11">
@@ -887,7 +1040,7 @@ function ChatsList({ matches, onOpenChat, animateLatest }) {
       {matches === null && [1, 2, 3].map(i => <Skeleton key={i} className="h-20 rounded-2xl bg-white/5" />)}
       {matches && matches.length === 0 && (
         <div className="glass rounded-2xl p-10 text-center">
-          <Heart className="w-10 h-10 mx-auto text-[#00ff88] mb-3" />
+          <Heart className="w-10 h-10 mx-auto text-[#24d18f] mb-3" />
           <p className="text-white/70">No connections yet. Keep discovering!</p>
         </div>
       )}
@@ -903,7 +1056,7 @@ function ChatsList({ matches, onOpenChat, animateLatest }) {
               <AvatarFallback>{m.otherProfile?.name?.slice(0, 1)}</AvatarFallback>
             </Avatar>
             {m.otherProfile?.online && (
-              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-[#00ff88] ring-2 ring-background" />
+              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-[#24d18f] ring-2 ring-background" />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -911,7 +1064,7 @@ function ChatsList({ matches, onOpenChat, animateLatest }) {
               <span className="font-semibold truncate">{m.otherProfile?.name}<span className="text-white/60 font-medium">, {m.otherProfile?.age}</span></span>
               <VerificationBadge verified={m.otherProfile?.verified} />
               {m.unreadCount > 0 && (
-                <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-[#00ff88] text-black text-[10px] font-extrabold flex items-center justify-center">
+                <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-[#24d18f] text-black text-[10px] font-extrabold flex items-center justify-center">
                   {m.unreadCount > 9 ? '9+' : m.unreadCount}
                 </span>
               )}
@@ -919,7 +1072,9 @@ function ChatsList({ matches, onOpenChat, animateLatest }) {
             {m.lastMessage ? (
               <div className={`text-xs truncate mt-0.5 ${m.unreadCount > 0 ? 'text-white/85 font-medium' : 'text-white/50'}`}>
                 {m.lastMessage.fromMe && <span className="text-white/40">You: </span>}
-                {m.lastMessage.text}
+                {m.lastMessage.kind === 'image' && !m.lastMessage.text
+                  ? <span className="inline-flex items-center gap-1"><Camera className="w-3 h-3" /> Photo</span>
+                  : m.lastMessage.text}
               </div>
             ) : (
               <div className="text-xs text-white/45 truncate mt-0.5">{m.otherProfile?.gymName} · {m.otherProfile?.goal}</div>
@@ -952,11 +1107,11 @@ function RequestRow({ req, kind, onAccept, onDecline, onCancel }) {
           <VerificationBadge verified={p?.verified} />
         </div>
         <div className="text-xs text-white/55 truncate">{p?.gymName || '—'}{p?.city ? ` · ${p.city}` : ''}</div>
-        {p?.goal && <div className="text-[11px] text-[#00ff88]/85 truncate mt-0.5">{p.goal}</div>}
+        {p?.goal && <div className="text-[11px] text-[#24d18f]/85 truncate mt-0.5">{p.goal}</div>}
       </div>
       {kind === 'incoming' ? (
         <div className="flex flex-col gap-1.5">
-          <Button size="sm" onClick={() => wrap(() => onAccept(req))} disabled={busy} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold h-8 text-xs px-3">
+          <Button size="sm" onClick={() => wrap(() => onAccept(req))} disabled={busy} className="bg-[#24d18f] hover:bg-[#17b978] text-black font-semibold h-8 text-xs px-3">
             {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Accept'}
           </Button>
           <Button size="sm" onClick={() => wrap(() => onDecline(req))} disabled={busy} variant="outline" className="bg-white/5 border-white/10 hover:bg-white/10 h-8 text-xs px-3">Decline</Button>
@@ -1029,7 +1184,7 @@ function RequestsTab({ onAccepted }) {
             onClick={() => setTab(t.k)}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${tab === t.k ? 'bg-white/10 text-white' : 'text-white/55 hover:text-white'}`}
           >
-            {t.label}{typeof t.count === 'number' && t.count > 0 ? <span className="ml-1.5 text-[#00ff88]">{t.count}</span> : ''}
+            {t.label}{typeof t.count === 'number' && t.count > 0 ? <span className="ml-1.5 text-[#24d18f]">{t.count}</span> : ''}
           </button>
         ))}
       </div>
@@ -1093,7 +1248,7 @@ function Connections({ onOpenChat }) {
           <TabsTrigger value="requests" className="relative data-[state=active]:bg-white/10 data-[state=active]:text-white">
             Requests
             {pendingIncomingCount > 0 && (
-              <span className="ml-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#00ff88] text-black text-[10px] font-extrabold flex items-center justify-center">
+              <span className="ml-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#24d18f] text-black text-[10px] font-extrabold flex items-center justify-center">
                 {pendingIncomingCount > 9 ? '9+' : pendingIncomingCount}
               </span>
             )}
@@ -1117,8 +1272,11 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [confirmBlock, setConfirmBlock] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [previewImage, setPreviewImage] = useState(null)
   const scrollerRef = useRef(null)
   const typingTimerRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   const load = async () => {
     try {
@@ -1158,6 +1316,41 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
     } catch { toast.error('Failed to send') }
   }
 
+  const sendImage = async (file) => {
+    if (!file) return
+    if (!file.type?.startsWith('image/')) { toast.error('Please pick an image file'); return }
+    if (file.size > 8 * 1024 * 1024) { toast.error('Image too large. Max 8MB.'); return }
+    setUploadingImage(true)
+    try {
+      const dataUri = await compressImage(file, 1280, 0.72)
+      const base64Body = dataUri.split(',')[1] || ''
+      const approxKb = Math.floor(base64Body.length * 0.75 / 1024)
+      if (approxKb > 580) { toast.error('Image too detailed — try a smaller one.'); return }
+      const res = await fetch('/api/messages', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId: match.id, image: dataUri }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (res.status === 429) toast.error(data.error || 'Slow down')
+        else toast.error(data.error || 'Failed to send photo')
+        return
+      }
+      load()
+    } catch (e) {
+      toast.error(e?.message || 'Could not send photo')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const handleImagePick = (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) sendImage(file)
+  }
+
   const blockUser = async () => {
     try {
       await fetch('/api/blocks', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: match.otherProfile?.id }) })
@@ -1180,7 +1373,7 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-sm flex items-center gap-1.5 truncate">{match.otherProfile?.name} <VerificationBadge verified={match.otherProfile?.verified} /></div>
             <div className="text-xs text-white/50">
-              {otherTyping ? <span className="text-[#00ff88]">typing…</span> : (otherActive.online ? <span className="text-[#00ff88]">Online now</span> : (otherActive.text || 'Offline'))}
+              {otherTyping ? <span className="text-[#24d18f]">typing…</span> : (otherActive.online ? <span className="text-[#24d18f]">Online now</span> : (otherActive.text || 'Offline'))}
             </div>
           </div>
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -1228,11 +1421,33 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
           )}
           {messages.map(m => {
             const mine = m.fromUserId === currentUserId
+            const hasImage = !!m.image
+            const hasText = !!(m.text && m.text.trim())
             return (
               <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${mine ? 'bg-[#00ff88] text-black' : 'glass border-white/10'} ${m.flagged ? 'opacity-70 ring-1 ring-red-500/40' : ''}`}>
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.text}</div>
-                  <div className={`text-[10px] mt-1 ${mine ? 'text-black/50' : 'text-white/40'}`}>{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                <div className={`max-w-[78%] rounded-2xl overflow-hidden ${mine ? 'bg-[#24d18f] text-black' : 'glass border border-white/10'} ${m.flagged ? 'opacity-70 ring-1 ring-red-500/40' : ''} ${hasImage ? 'p-1' : 'px-4 py-2.5'} slide-in`}>
+                  {hasImage && (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewImage(m.image)}
+                      className="block w-full max-w-[260px] rounded-xl overflow-hidden bg-black/20 focus:outline-none focus:ring-2 focus:ring-[#24d18f]/60"
+                      aria-label="Open photo"
+                    >
+                      <img
+                        src={m.image}
+                        alt="Shared photo"
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-auto max-h-[320px] object-cover"
+                      />
+                    </button>
+                  )}
+                  {hasText && (
+                    <div className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${hasImage ? 'px-3 pt-2 pb-0.5' : ''}`}>{m.text}</div>
+                  )}
+                  <div className={`text-[10px] ${hasImage ? 'px-3 pb-1.5 pt-0.5' : 'mt-1'} ${mine ? 'text-black/55' : 'text-white/45'}`}>
+                    {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
                 </div>
               </div>
             )
@@ -1257,17 +1472,47 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
       </div>
       <div className="border-t border-white/10 glass-strong">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImagePick}
+          />
+          <Button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingImage}
+            variant="outline"
+            size="icon"
+            className="bg-white/5 border-white/10 hover:bg-white/10 hover:text-[#24d18f] rounded-full shrink-0"
+            title="Send photo"
+            aria-label="Send photo"
+          >
+            {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+          </Button>
           <Input
             value={text}
             onChange={e => { setText(e.target.value); pingTyping() }}
             onKeyDown={e => e.key === 'Enter' && send()}
             maxLength={1000}
-            placeholder="Type a message..."
+            placeholder={uploadingImage ? 'Uploading photo\u2026' : 'Type a message...'}
+            disabled={uploadingImage}
             className="bg-white/5 border-white/10"
           />
-          <Button onClick={send} disabled={!text.trim()} className="bg-[#00ff88] hover:bg-[#00cc6a] text-black rounded-full disabled:opacity-50" size="icon"><Send className="w-4 h-4" /></Button>
+          <Button onClick={send} disabled={!text.trim() || uploadingImage} className="bg-[#24d18f] hover:bg-[#17b978] text-black rounded-full disabled:opacity-50" size="icon"><Send className="w-4 h-4" /></Button>
         </div>
       </div>
+
+      {/* Full-image preview */}
+      <Dialog open={!!previewImage} onOpenChange={(o) => !o && setPreviewImage(null)}>
+        <DialogContent className="bg-black/95 border-white/10 max-w-2xl p-2 sm:p-3">
+          <DialogHeader className="sr-only"><DialogTitle>Photo</DialogTitle></DialogHeader>
+          {previewImage && (
+            <img src={previewImage} alt="Photo preview" className="w-full h-auto max-h-[80vh] object-contain rounded-xl" />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirmBlock} onOpenChange={setConfirmBlock}>
         <DialogContent className="bg-[#0a0b0d] border-white/10 max-w-sm">
@@ -1359,7 +1604,7 @@ function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated
       <div className="flex items-center justify-between py-1">
         <div className="flex items-center gap-2"><Ic className="w-4 h-4 text-white/55" /> <span className="text-sm">{label}</span></div>
         {verified ? (
-          <Badge className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30">Verified</Badge>
+          <Badge className="bg-[#24d18f]/15 text-[#24d18f] border-[#24d18f]/30">Verified</Badge>
         ) : status === 'pending' ? (
           <Badge variant="outline" className="bg-amber-500/10 text-amber-300 border-amber-500/30">In review</Badge>
         ) : status === 'rejected' ? (
@@ -1400,27 +1645,27 @@ function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated
 
         {/* Profile completion progress */}
         {completion && !completion.complete && (
-          <Card className="glass border-[#00ff88]/20 p-5 bg-gradient-to-br from-[#00ff88]/[0.04] to-transparent">
+          <Card className="glass border-[#24d18f]/20 p-5 bg-gradient-to-br from-[#24d18f]/[0.04] to-transparent">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <div className="text-sm font-bold text-white">Your profile is {completion.score}% complete</div>
                 <div className="text-xs text-white/55 mt-0.5">Finish to be visible in Discover.</div>
               </div>
-              <div className="text-2xl font-black text-[#00ff88]">{completion.score}%</div>
+              <div className="text-2xl font-black text-[#24d18f]">{completion.score}%</div>
             </div>
             <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-[#00ff88] to-[#00cc6a] transition-all duration-500" style={{ width: `${completion.score}%` }} />
+              <div className="h-full bg-gradient-to-r from-[#24d18f] to-[#17b978] transition-all duration-500" style={{ width: `${completion.score}%` }} />
             </div>
             {completion.missing?.length > 0 && (
               <div className="mt-3 space-y-1">
                 {completion.missing.slice(0, 4).map(m => (
                   <div key={m.key} className="text-xs text-white/65 flex items-center gap-2">
-                    <span className="w-1 h-1 rounded-full bg-[#00ff88]" /> {m.label}
+                    <span className="w-1 h-1 rounded-full bg-[#24d18f]" /> {m.label}
                   </div>
                 ))}
               </div>
             )}
-            <Button onClick={onEditProfile} className="mt-4 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold w-full h-10">
+            <Button onClick={onEditProfile} className="mt-4 bg-[#24d18f] hover:bg-[#17b978] text-black font-semibold w-full h-10">
               Complete profile
             </Button>
           </Card>
@@ -1447,7 +1692,7 @@ function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated
         <Card className="glass border-white/10 p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">Verification</h3>
-            {profile?.verified && <Badge className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30">Verified ✓</Badge>}
+            {profile?.verified && <Badge className="bg-[#24d18f]/15 text-[#24d18f] border-[#24d18f]/30">Verified ✓</Badge>}
           </div>
           <div className="space-y-2">
             <VerifyRow type="selfie" label="Selfie verification" icon={Camera} />
@@ -1460,8 +1705,8 @@ function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated
         {/* Push notifications card */}
         <Card className="glass border-white/10 p-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/20 flex items-center justify-center">
-              <Bell className="w-5 h-5 text-[#00ff88]" />
+            <div className="w-10 h-10 rounded-xl bg-[#24d18f]/10 border border-[#24d18f]/20 flex items-center justify-center">
+              <Bell className="w-5 h-5 text-[#24d18f]" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold">Push notifications</div>
@@ -1476,7 +1721,7 @@ function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated
               <Button onClick={enablePush} variant="outline" className="bg-white/5 border-white/10">Enable</Button>
             )}
             {pushState === 'enabled' && (
-              <Badge className="bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30">On</Badge>
+              <Badge className="bg-[#24d18f]/15 text-[#24d18f] border-[#24d18f]/30">On</Badge>
             )}
           </div>
         </Card>
@@ -1534,7 +1779,7 @@ function ForbiddenView({ onBack }) {
       <Lock className="w-10 h-10 mx-auto text-white/40" />
       <h2 className="text-2xl font-bold mt-4">Restricted area</h2>
       <p className="text-sm text-white/55 mt-1">This page is for Trainr admins only.</p>
-      <Button onClick={onBack} className="mt-6 bg-[#00ff88] hover:bg-[#00cc6a] text-black rounded-full">Back to Discover</Button>
+      <Button onClick={onBack} className="mt-6 bg-[#24d18f] hover:bg-[#17b978] text-black rounded-full">Back to Discover</Button>
     </div>
   )
 }
@@ -1614,11 +1859,11 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-black border border-[#00ff88]/30">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-black border border-[#24d18f]/30">
             <img src={LOGO} alt="Trainr" className="w-full h-full object-cover" />
           </div>
           <div className="flex items-center gap-2 text-white/55 text-sm">
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00ff88]" />
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#24d18f]" />
             <span className="tracking-wide">Loading Trainr</span>
           </div>
         </div>
