@@ -45,6 +45,21 @@ import ReportDialog from '@/components/views/ReportDialog'
 const PREMIUM_ENABLED = process.env.NEXT_PUBLIC_PREMIUM_ENABLED === 'true'
 const FIREBASE_AUTH_ENABLED = process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'firebase'
 
+const getProfileName = (p) => {
+  return p?.name || 'Unknown User'
+}
+
+const getPhotoSrc = (photos, index = 0, fallback = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop') => {
+  if (!photos || !Array.isArray(photos) || photos.length === 0) {
+    return fallback
+  }
+  const photo = photos[index]
+  if (!photo) {
+    return photos[0] || fallback
+  }
+  return photo
+}
+
 function Navbar({ user, view, setView, onOpenPremium, pendingIncomingCount = 0 }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-strong">
@@ -521,6 +536,7 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
   const [sheetOpen, setSheetOpen] = useState(false)
   
   const photos = profile.photos || []
+  const displayName = getProfileName(profile)
   
   const triggerConnect = (e) => {
     e?.stopPropagation?.()
@@ -550,7 +566,7 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
         className="glass-strong border-white/10 overflow-hidden w-full max-w-md mx-auto rounded-3xl shadow-2xl shadow-black/30 hover:border-white/15 transition-colors cursor-pointer"
       >
         <div className="relative aspect-[4/5] bg-white/[0.03]">
-          <SmartImg src={photos[photoIdx]} alt={profile.name} className="w-full h-full" />
+          <SmartImg src={getPhotoSrc(profile.photos, photoIdx)} alt={displayName} className="w-full h-full" />
 
           {photos.length > 1 && (
             <div className="absolute top-3 left-3 right-3 flex gap-1 z-10">
@@ -565,7 +581,7 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
 
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent p-5 pt-20 z-[6] pointer-events-none">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-2xl md:text-[26px] font-extrabold leading-tight">{profile.name}<span className="text-white/70 font-bold">, {profile.age}</span></h3>
+              <h3 className="text-2xl md:text-[26px] font-extrabold leading-tight">{displayName}<span className="text-white/70 font-bold">, {profile.age}</span></h3>
               <VerificationBadge verified={profile.verified} />
             </div>
             <div className="flex items-center gap-1.5 text-[13px] text-white/70 mt-1">
@@ -632,14 +648,14 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
           </SheetHeader>
           <div className="relative">
             <div className="w-full aspect-[4/5] sm:aspect-square relative">
-              <SmartImg src={photos[0]} alt={profile.name} className="w-full h-full" />
+              <SmartImg src={getPhotoSrc(profile.photos, 0)} alt={displayName} className="w-full h-full" />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0a0b0d] to-transparent h-32" />
             </div>
             
             <div className="px-5 pb-32 -mt-10 relative z-10 space-y-6">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-3xl font-extrabold">{profile.name}<span className="text-white/70 font-bold">, {profile.age}</span></h2>
+                  <h2 className="text-3xl font-extrabold">{displayName}<span className="text-white/70 font-bold">, {profile.age}</span></h2>
                   <VerificationBadge verified={profile.verified} />
                 </div>
                 <div className="flex items-center gap-1.5 text-sm text-white/70 mt-1">
@@ -715,7 +731,7 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
               </div>
               <div className="max-w-md mx-auto text-center mt-3">
                 <button onClick={triggerReport} className="text-xs text-white/40 hover:text-red-400 transition flex items-center justify-center gap-1 mx-auto">
-                  <AlertTriangle className="w-3.5 h-3.5" /> Report {profile.name}
+                  <AlertTriangle className="w-3.5 h-3.5" /> Report {displayName}
                 </button>
               </div>
             </div>
@@ -914,9 +930,9 @@ function Discover() {
         return
       }
       if (data.status === 'accepted') {
-        toast.success(`You're now connected with ${p.name}!`, { description: 'Plan your next workout together — open chat.' })
+        toast.success(`You're now connected with ${p.name || 'Unknown User'}!`, { description: 'Plan your next workout together — open chat.' })
       } else {
-        toast.success(`Request sent to ${p.name}`, { description: 'They\u2019ll be notified.' })
+        toast.success(`Request sent to ${p.name || 'Unknown User'}`, { description: 'They\u2019ll be notified.' })
       }
     } catch { toast.error('Failed to send request') }
   }
@@ -1052,8 +1068,8 @@ function ChatsList({ matches, onOpenChat, animateLatest }) {
         >
           <div className="relative">
             <Avatar className="w-14 h-14 ring-1 ring-white/10">
-              <AvatarImage src={m.otherProfile?.photos?.[0]} />
-              <AvatarFallback>{m.otherProfile?.name?.slice(0, 1)}</AvatarFallback>
+              <AvatarImage src={getPhotoSrc(m.otherProfile?.photos, 0)} />
+              <AvatarFallback>{getProfileName(m.otherProfile).slice(0, 1)}</AvatarFallback>
             </Avatar>
             {m.otherProfile?.online && (
               <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-[#24d18f] ring-2 ring-background" />
@@ -1061,7 +1077,7 @@ function ChatsList({ matches, onOpenChat, animateLatest }) {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-semibold truncate">{m.otherProfile?.name}<span className="text-white/60 font-medium">, {m.otherProfile?.age}</span></span>
+              <span className="font-semibold truncate">{getProfileName(m.otherProfile)}<span className="text-white/60 font-medium">, {m.otherProfile?.age}</span></span>
               <VerificationBadge verified={m.otherProfile?.verified} />
               {m.unreadCount > 0 && (
                 <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-[#24d18f] text-black text-[10px] font-extrabold flex items-center justify-center">
@@ -1098,12 +1114,12 @@ function RequestRow({ req, kind, onAccept, onDecline, onCancel }) {
   return (
     <div className="glass rounded-2xl p-4 flex items-center gap-3 slide-in">
       <Avatar className="w-12 h-12 ring-1 ring-white/10">
-        <AvatarImage src={p?.photos?.[0]} />
-        <AvatarFallback>{p?.name?.slice(0, 1) || '?'}</AvatarFallback>
+        <AvatarImage src={getPhotoSrc(p?.photos, 0)} />
+        <AvatarFallback>{getProfileName(p).slice(0, 1)}</AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
         <div className="font-semibold truncate flex items-center gap-1.5">
-          {p?.name || 'Unknown'}{p?.age ? <span className="text-white/55 font-medium">, {p.age}</span> : null}
+          {getProfileName(p)}{p?.age ? <span className="text-white/55 font-medium">, {p.age}</span> : null}
           <VerificationBadge verified={p?.verified} />
         </div>
         <div className="text-xs text-white/55 truncate">{p?.gymName || '—'}{p?.city ? ` · ${p.city}` : ''}</div>
@@ -1151,7 +1167,7 @@ function RequestsTab({ onAccepted }) {
       const r = await fetch('/api/requests/accept', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId: req.id }) })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || 'Could not accept')
-      toast.success(`You're now connected with ${req.fromProfile?.name || 'a partner'} 💪`, { description: 'Open chat to plan your next workout together.' })
+      toast.success(`You're now connected with ${getProfileName(req.fromProfile)} 💪`, { description: 'Open chat to plan your next workout together.' })
       setIncoming(prev => (prev || []).filter(x => x.id !== req.id))
       onAccepted?.()
     } catch (e) { toast.error(e.message) }
@@ -1354,7 +1370,7 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
   const blockUser = async () => {
     try {
       await fetch('/api/blocks', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: match.otherProfile?.id }) })
-      toast.success(`${match.otherProfile?.name || 'User'} blocked`, { description: 'Chat removed. They can\u2019t contact you.' })
+      toast.success(`${getProfileName(match.otherProfile)} blocked`, { description: 'Chat removed. They can\u2019t contact you.' })
       onChatRemoved?.()
     } catch { toast.error('Could not block') }
   }
@@ -1369,9 +1385,9 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
       <div className="border-b border-white/10 glass-strong">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <Button onClick={onBack} variant="ghost" size="icon" className="rounded-full"><ArrowLeft className="w-5 h-5" /></Button>
-          <Avatar className="w-9 h-9"><AvatarImage src={match.otherProfile?.photos?.[0]} /><AvatarFallback>{match.otherProfile?.name?.slice(0,1)}</AvatarFallback></Avatar>
+          <Avatar className="w-9 h-9"><AvatarImage src={getPhotoSrc(match.otherProfile?.photos, 0)} /><AvatarFallback>{getProfileName(match.otherProfile).slice(0, 1)}</AvatarFallback></Avatar>
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-sm flex items-center gap-1.5 truncate">{match.otherProfile?.name} <VerificationBadge verified={match.otherProfile?.verified} /></div>
+            <div className="font-semibold text-sm flex items-center gap-1.5 truncate">{getProfileName(match.otherProfile)} <VerificationBadge verified={match.otherProfile?.verified} /></div>
             <div className="text-xs text-white/50">
               {otherTyping ? <span className="text-[#24d18f]">typing…</span> : (otherActive.online ? <span className="text-[#24d18f]">Online now</span> : (otherActive.text || 'Offline'))}
             </div>
@@ -1516,7 +1532,7 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
 
       <Dialog open={confirmBlock} onOpenChange={setConfirmBlock}>
         <DialogContent className="bg-[#0a0b0d] border-white/10 max-w-sm">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><Lock className="w-5 h-5 text-red-400" /> Block {match.otherProfile?.name}?</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Lock className="w-5 h-5 text-red-400" /> Block {getProfileName(match.otherProfile)}?</DialogTitle></DialogHeader>
           <p className="text-sm text-white/65 leading-relaxed">This will <strong className="text-white">delete this conversation</strong> and prevent future contact. You both disappear from each other\u2019s feeds.</p>
           <div className="flex gap-2 mt-2">
             <Button onClick={() => setConfirmBlock(false)} variant="outline" className="flex-1 bg-white/5 border-white/10">Cancel</Button>
@@ -1635,9 +1651,9 @@ function SettingsView({ user, profile, onEditProfile, onLogout, onProfileUpdated
       <h1 className="text-3xl md:text-4xl font-black tracking-tight">Settings</h1>
       <div className="mt-6 space-y-3">
         <Card className="glass border-white/10 p-5 flex items-center gap-4">
-          <Avatar className="w-14 h-14"><AvatarImage src={profile?.photos?.[0] || user.picture} /><AvatarFallback>{user.name?.slice(0,1)}</AvatarFallback></Avatar>
+          <Avatar className="w-14 h-14"><AvatarImage src={getPhotoSrc(profile?.photos, 0, user.picture)} /><AvatarFallback>{user.name?.slice(0,1)}</AvatarFallback></Avatar>
           <div className="flex-1 min-w-0">
-            <div className="font-semibold flex items-center gap-1.5 truncate">{profile?.name || user.name} <VerificationBadge verified={profile?.verified} /></div>
+            <div className="font-semibold flex items-center gap-1.5 truncate">{profile?.name || user.name || 'Unknown User'} <VerificationBadge verified={profile?.verified} /></div>
             <div className="text-sm text-white/60 truncate">{user.email}</div>
           </div>
           <Button onClick={onEditProfile} variant="outline" className="bg-white/5 border-white/10">Edit</Button>
