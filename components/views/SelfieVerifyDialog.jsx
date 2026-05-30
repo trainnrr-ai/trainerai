@@ -1,22 +1,48 @@
+// Face Verify - Auto Verified
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Camera, RefreshCw, CheckCircle2, Loader2, AlertCircle, Sparkles } from 'lucide-react'
+import { Camera, RefreshCw, CheckCircle2, Loader2, X, Shield } from 'lucide-react'
 import { toast } from 'sonner'
-import { analyseSelfie, isFaceDetectorSupported } from '@/lib/client/face'
+import * as faceapi from 'face-api.js'
 
-export default function SelfieVerifyDialog({ open, onOpenChange, onVerified }) {
+// Cache the model loading promise globally so it only runs once
+let modelsPromise = null
+function loadFaceApiModels() {
+  if (!modelsPromise) {
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model'
+    modelsPromise = Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+    ])
+  }
+  return modelsPromise
+}
+
+// Helper to load an image with CORS allowed
+function loadImg(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = (e) => reject(new Error('Failed to load profile photo: ' + src))
+    img.src = src
+  })
+}
+
+export default function SelfieVerifyDialog({ open, onOpenChange, onVerified, profile }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
-  const [phase, setPhase] = useState('idle') // idle | streaming | analysing | captured | submitting
+  const [phase, setPhase] = useState('loading-models') // loading-models | camera-active | processing | success | failed
   const [snap, setSnap] = useState(null)
   const [error, setError] = useState(null)
-  const [analysis, setAnalysis] = useState(null) // { ok, faceCount, reason, supported }
+  const [matchScore, setMatchScore] = useState(null)
 
   const stopCamera = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop())
+      streamRef.current.getTracks().forEach((t) => t.stop())
       streamRef.current = null
     }
   }
@@ -24,7 +50,7 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified }) {
   const startCamera = async () => {
     setError(null)
     setSnap(null)
-    setPhase('streaming')
+    setPhase('camera-active')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
@@ -35,9 +61,9 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified }) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
       }
-    } catch {
+    } catch (err) {
+      console.error(err)
       setError('Camera access denied. Please allow camera permissions and try again.')
-      setPhase('idle')
     }
   }
 
@@ -58,151 +84,259 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified }) {
     setSnap(dataUrl)
     stopCamera()
 
-    // Lightweight client-side face check (browsers that support FaceDetector)
-    setPhase('analysing')
-    const result = await analyseSelfie(dataUrl)
-    setAnalysis(result)
-    if (!result.ok) {
-      setError(result.reason || 'Selfie did not pass quality check')
-      setPhase('captured') // allow retake
-    } else {
-      setError(null)
-      setPhase('captured')
+    setPhase('processing')
+    setError(null)
+
+    try {
+      // 1. Get face descriptor from selfie
+      const selfieDetection = await faceapi
+        .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceDescriptor()
+
+      if (!selfieDetection) {
+        throw new Error('No face detected in your selfie. Please look straight at the camera in good lighting.')
+      }
+
+      // 2. Get face descriptors from each profile photo
+      const photos = profile?.photos || []
+      if (photos.length === 0) {
+        throw new Error('You need at least 1 profile photo to verify your identity.')
+      }
+
+      let bestDistance = Infinity
+      let faceDetectedInAnyProfilePhoto = false
+
+      for (const photoUrl of photos) {
+        try {
+          const img = await loadImg(photoUrl)
+          const detection = await faceapi
+            .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+            .withFaceLandmarks()
+            .withFaceDescriptor()
+
+          if (detection) {
+            faceDetectedInAnyProfilePhoto = true
+            const distance = faceapi.euclideanDistance(selfieDetection.descriptor, detection.descriptor)
+            if (distance < bestDistance) {
+              bestDistance = distance
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to detect face in profile photo:', photoUrl, err)
+        }
+      }
+
+      if (!faceDetectedInAnyProfilePhoto) {
+        throw new Error('No face detected in your profile photos. Make sure your profile photos clearly show your face.')
+      }
+
+      // 3. Matching logic
+      // distance < 0.5 → Strong match
+      // distance < 0.6 → Good match
+      // distance >= 0.6 → No match
+      const distance = bestDistance
+      const verified = distance < 0.6
+      
+      // Calculate match score percentage
+      let score = Math.round((1 - distance) * 100)
+      if (verified) {
+        // Map distance < 0.6 to score > 60%
+        score = Math.max(score, Math.round(60 + (0.6 - distance) * 50))
+      } else {
+        score = Math.min(score, 59)
+      }
+      setMatchScore(score)
+
+      if (verified) {
+        // Call verification API
+        const res = await fetch('/api/profile/verify-face', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ matchScore: score, verified: true }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Verification API error')
+        
+        onVerified?.(data.profile)
+        setPhase('success')
+      } else {
+        setPhase('failed')
+      }
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Verification process failed.')
+      setPhase('failed')
     }
   }
 
   const retake = () => {
     setSnap(null)
     setError(null)
-    setAnalysis(null)
+    setMatchScore(null)
     startCamera()
-  }
-
-  const submit = async () => {
-    if (!snap) return
-    setPhase('submitting')
-    try {
-      const res = await fetch('/api/profile/verify-selfie', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selfie: snap }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Verification failed')
-      if (data.pending) {
-        toast.success('Selfie submitted!', { description: 'We’ll review and notify you shortly.' })
-      } else {
-        toast.success('Selfie verified!', { description: 'Your blue badge is now active.' })
-      }
-      onVerified?.(data.profile)
-      handleClose()
-    } catch (e) {
-      toast.error(e.message)
-      setPhase('captured')
-    }
   }
 
   const handleClose = () => {
     stopCamera()
-    setPhase('idle')
+    setPhase('loading-models')
     setSnap(null)
     setError(null)
+    setMatchScore(null)
     onOpenChange(false)
   }
+
+  useEffect(() => {
+    if (open) {
+      setPhase('loading-models')
+      setError(null)
+      setSnap(null)
+      setMatchScore(null)
+      loadFaceApiModels()
+        .then(() => {
+          startCamera()
+        })
+        .catch((err) => {
+          console.error(err)
+          setError('Failed to setup face verification models.')
+          setPhase('failed')
+        })
+    } else {
+      stopCamera()
+    }
+  }, [open])
 
   useEffect(() => () => stopCamera(), [])
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
-      <DialogContent className="bg-[#0a0b0d] border-white/10 max-w-md">
+      <DialogContent className="bg-[#0a0b0d] border-white/10 max-w-md text-white">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Camera className="w-5 h-5 text-[#00ff88]" /> Selfie Verification</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-sky-400">
+            <Shield className="w-5 h-5" /> Identity Verification
+          </DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-white/60">Take a clear selfie to earn your verified badge. Your face should be centered and well-lit.</p>
 
-        <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-black/40 border border-white/10">
-          {phase === 'idle' && !snap && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/50">
-              <Camera className="w-14 h-14" />
-              <p className="text-sm">Camera off</p>
-            </div>
-          )}
-          {phase === 'streaming' && (
-            <video ref={videoRef} className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} playsInline muted />
-          )}
-          {snap && phase !== 'streaming' && (
-            <img src={snap} alt="Selfie" className="w-full h-full object-cover" />
-          )}
-          {phase === 'streaming' && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-3/5 h-3/5 rounded-full border-2 border-[#00ff88]/60 border-dashed" />
-            </div>
-          )}
-          {phase === 'analysing' && (
-            <div className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center gap-2">
-              <Loader2 className="w-7 h-7 animate-spin text-[#00ff88]" />
-              <span className="text-xs text-white/75 font-medium">Checking selfie quality\u2026</span>
-            </div>
-          )}
-        </div>
-
-        {/* Quality check feedback */}
-        {phase === 'captured' && analysis && analysis.ok && (
-          <div className="rounded-xl bg-[#00ff88]/[0.08] border border-[#00ff88]/25 p-3 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-[#00ff88] flex-shrink-0" />
-            <span className="text-xs text-white/85">Looks good \u2014 1 face detected. Ready to submit.</span>
-          </div>
-        )}
-        {phase === 'captured' && analysis && !analysis.ok && (
-          <div className="rounded-xl bg-amber-500/[0.08] border border-amber-500/30 p-3 flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-300 flex-shrink-0 mt-[2px]" />
-            <span className="text-xs text-white/85">{analysis.reason || 'Please retake.'}</span>
+        {phase === 'loading-models' && (
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+            <Loader2 className="w-10 h-10 animate-spin text-sky-400" />
+            <p className="text-sm text-white/80 font-medium">Setting up face verification...</p>
+            <p className="text-xs text-white/40">Loading face verification...</p>
           </div>
         )}
 
-        {error && phase !== 'captured' && <p className="text-sm text-red-400">{error}</p>}
+        {phase === 'camera-active' && (
+          <div className="space-y-4">
+            <p className="text-xs text-white/60">
+              Look straight at camera in good lighting. Position your face in the oval guide.
+            </p>
+            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-black/40 border border-white/10">
+              {error ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-3">
+                  <X className="w-10 h-10 text-red-500" />
+                  <p className="text-sm text-red-400">{error}</p>
+                </div>
+              ) : (
+                <video ref={videoRef} className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} playsInline muted />
+              )}
+              {!error && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+                  <div className="w-48 h-64 rounded-[50%] border-2 border-dashed border-sky-400/80 bg-transparent flex items-center justify-center">
+                    <span className="text-white/80 text-[10px] text-center px-3 font-semibold select-none bg-black/40 py-1 rounded-full backdrop-blur-sm">
+                      Position face here
+                    </span>
+                  </div>
+                  <p className="text-white/90 text-xs font-semibold mt-4 bg-black/60 px-4 py-1.5 rounded-full backdrop-blur-sm">
+                    Position your face in the oval
+                  </p>
+                </div>
+              )}
+            </div>
+            {!error && (
+              <Button onClick={capture} className="w-full bg-sky-500 hover:bg-sky-650 text-white font-bold rounded-xl h-11 shadow-md shadow-sky-500/10">
+                Take Selfie
+              </Button>
+            )}
+          </div>
+        )}
 
-        <div className="flex gap-2">
-          {phase === 'idle' && !snap && (
-            <Button onClick={startCamera} className="flex-1 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold">
-              <Camera className="w-4 h-4 mr-2" /> Open Camera
+        {phase === 'processing' && (
+          <div className="space-y-4">
+            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-black/40 border border-white/10">
+              {snap && <img src={snap} alt="Selfie Preview" className="w-full h-full object-cover" />}
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4 text-white p-6">
+                <Loader2 className="w-10 h-10 animate-spin text-sky-400" />
+                <div className="w-full max-w-[200px] h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-sky-500 rounded-full animate-pulse w-4/5 mx-auto" />
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="text-sm font-bold text-white">Comparing with your photos...</p>
+                  <p className="text-xs text-white/70">Analyzing face match...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {phase === 'success' && (
+          <div className="flex flex-col items-center justify-center text-center p-6 space-y-4">
+            <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/30">
+              <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+            </div>
+            <h3 className="text-xl font-bold text-white">Identity Verified!</h3>
+            <p className="text-sm text-white/80">Match confidence: <span className="text-emerald-400 font-extrabold">{matchScore}%</span></p>
+            <p className="text-xs text-white/60 bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl max-w-xs leading-relaxed">
+              You now have a verified badge on your profile. Your photos have been matched successfully.
+            </p>
+            <Button onClick={handleClose} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl h-11">
+              Close
             </Button>
-          )}
-          {phase === 'streaming' && (
-            <Button onClick={capture} className="flex-1 bg-[#00ff88] hover:bg-[#00cc6a] text-black font-semibold">
-              Capture Selfie
-            </Button>
-          )}
-          {phase === 'analysing' && (
-            <Button disabled className="flex-1 bg-white/10 text-white/55"><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analysing\u2026</Button>
-          )}
-          {phase === 'captured' && (
-            <>
-              <Button onClick={retake} variant="outline" className="bg-white/5 border-white/10">
-                <RefreshCw className="w-4 h-4 mr-2" /> Retake
+          </div>
+        )}
+
+        {phase === 'failed' && (
+          <div className="flex flex-col items-center justify-center text-center p-6 space-y-4">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/30">
+              <X className="w-10 h-10 text-red-500" />
+            </div>
+            <h3 className="text-xl font-bold text-white">Face not recognized</h3>
+            {error ? (
+              <p className="text-xs text-red-400 max-w-xs">{error}</p>
+            ) : (
+              <p className="text-xs text-white/60 max-w-xs">
+                Make sure your profile photos clearly show your face.
+              </p>
+            )}
+            
+            <div className="text-left bg-white/[0.02] border border-white/[0.06] p-4 rounded-xl w-full space-y-2">
+              <p className="text-xs font-bold text-white/80">Tips for a better match:</p>
+              <ul className="text-[11px] text-white/60 space-y-1 pl-1">
+                <li className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-sky-500" /> Good lighting
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-sky-500" /> Face straight
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-sky-500" /> No sunglasses
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-sky-500" /> Same person as profile photos
+                </li>
+              </ul>
+            </div>
+            
+            <div className="flex gap-2 w-full">
+              <Button onClick={handleClose} variant="outline" className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl h-11">
+                Cancel
               </Button>
-              <Button
-                onClick={submit}
-                disabled={analysis && !analysis.ok}
-                className={`flex-1 font-semibold ${analysis && !analysis.ok ? 'bg-white/10 text-white/40' : 'bg-[#00ff88] hover:bg-[#00cc6a] text-black'}`}
-              >
-                <CheckCircle2 className="w-4 h-4 mr-2" /> Submit for Review
+              <Button onClick={retake} className="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl h-11">
+                Try again
               </Button>
-            </>
-          )}
-          {phase === 'submitting' && (
-            <Button disabled className="flex-1 bg-[#00ff88]/60 text-black">
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting...
-            </Button>
-          )}
-        </div>
-        <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-2.5 flex items-start gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-[#00ff88] flex-shrink-0 mt-[2px]" />
-          <p className="text-[11px] text-white/55 leading-relaxed">
-            We compare your selfie with your profile photos and review for authenticity. Verification is <strong className="text-white/80">optional</strong> \u2014 you can use Trainr without it. Verified profiles get the blue badge and priority placement in Discover.
-          </p>
-        </div>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )

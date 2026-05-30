@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    --background: 220 13% 4%;
-    --foreground: 0 0% 98%;
-    --card: 220 13% 7%;
-    --card-foreground: 0 0% 98%;
-    --popover: 220 13% 6%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 145 100% 50%;
-    --primary-foreground: 220 13% 4%;
-    --secondary: 220 13% 12%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 220 13% 12%;
-    --muted-foreground: 220 8% 65%;
-    --accent: 145 100% 50%;
-    --accent-foreground: 220 13% 4%;
+    --background: 210 40% 98%;      /* #F8FAFC */
+    --foreground: 222 47% 11%;      /* #0F172A */
+    --card: 0 0% 100%;              /* #FFFFFF */
+    --card-foreground: 222 47% 11%; /* #0F172A */
+    --popover: 0 0% 100%;           /* #FFFFFF */
+    --popover-foreground: 222 47% 11%;
+    --primary: 199 89% 48%;         /* #0EA5E9 (sky-500) */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;       /* #F1F5F9 */
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 20% 47%; /* #64748B */
+    --accent: 210 40% 96.1%;          /* #F1F5F9 (slate-100) */
+    --accent-foreground: 222 47% 11%; /* #0F172A */
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 220 13% 14%;
-    --input: 220 13% 12%;
-    --ring: 145 100% 50%;
-    --radius: 0.875rem;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;          /* #E2E8F0 */
+    --input: 214 32% 91%;
+    --ring: 199 89% 48%;
+    --radius: 1rem;
   }
 }
 
@@ -34,8 +34,8 @@
     margin: 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
-    background: radial-gradient(1200px 600px at 10% -10%, rgba(0,255,136,0.08), transparent 60%),
-                radial-gradient(900px 500px at 100% 0%, rgba(0,255,136,0.05), transparent 60%),
+    background: radial-gradient(1200px 600px at 10% -10%, rgba(14,165,233,0.06), transparent 60%),
+                radial-gradient(900px 500px at 100% 0%, rgba(16,185,129,0.04), transparent 60%),
                 hsl(var(--background));
     min-height: 100vh;
   }
@@ -43,30 +43,30 @@
 
 @layer utilities {
   .glass {
-    background: rgba(255,255,255,0.04);
+    background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(226, 232, 240, 0.8);
   }
   .glass-strong {
-    background: rgba(20,22,26,0.7);
+    background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(226, 232, 240, 0.8);
   }
   .neon-glow {
-    box-shadow: 0 0 0 1px rgba(0,255,136,0.4), 0 0 24px rgba(0,255,136,0.25), 0 0 60px rgba(0,255,136,0.15);
+    box-shadow: 0 0 0 1px rgba(14,165,233,0.15), 0 4px 24px rgba(14,165,233,0.12), 0 8px 60px rgba(14,165,233,0.08);
   }
   .text-gradient {
-    background: linear-gradient(135deg, #ffffff 0%, #d1d5db 60%, #24d18f 100%);
+    background: linear-gradient(135deg, #0F172A 0%, #0EA5E9 50%, #0284C7 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
   .grid-bg {
     background-image:
-      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      linear-gradient(rgba(148,163,184,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148,163,184,0.05) 1px, transparent 1px);
     background-size: 48px 48px;
   }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -82,8 +82,8 @@
     animation: pulse-glow 2.4s ease-in-out infinite;
   }
   @keyframes pulse-glow {
-    0%,100% { box-shadow: 0 0 0 0 rgba(0,255,136,0.4); }
-    50% { box-shadow: 0 0 0 12px rgba(0,255,136,0); }
+    0%,100% { box-shadow: 0 0 0 0 rgba(14,165,233,0.3); }
+    50% { box-shadow: 0 0 0 12px rgba(14,165,233,0); }
   }
   .fade-up {
     animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both;
@@ -93,7 +93,7 @@
     to { opacity: 1; transform: translateY(0); }
   }
   .animate-shimmer {
-    background-image: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.02) 100%);
+    background-image: linear-gradient(90deg, rgba(14,165,233,0.01) 0%, rgba(14,165,233,0.05) 50%, rgba(14,165,233,0.01) 100%);
     background-size: 200% 100%;
     animation: shimmer 1.6s ease-in-out infinite;
   }
@@ -101,18 +101,18 @@
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
-  /* Subtle "request sent" feedback — under 250ms, premium fitness vibe (not dating-app loud) */
+  /* Subtle "request sent" feedback — under 250ms, premium fitness vibe (sky blue) */
   .connect-ping {
     animation: connectPing 220ms cubic-bezier(0.16,1,0.3,1) both;
   }
   @keyframes connectPing {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,255,136,0.45); }
-    60% { transform: scale(1.03); box-shadow: 0 0 0 14px rgba(0,255,136,0); }
-    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,255,136,0); }
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(14,165,233,0.45); }
+    60% { transform: scale(1.03); box-shadow: 0 0 0 14px rgba(14,165,233,0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(14,165,233,0); }
   }
   /* Soft glow halo for the Pending button state */
   .pending-halo {
-    box-shadow: 0 0 0 1px rgba(0,255,136,0.35), 0 0 18px rgba(0,255,136,0.18);
+    box-shadow: 0 0 0 1px rgba(14,165,233,0.3), 0 0 18px rgba(14,165,233,0.15);
   }
   /* Connection-added soft slide-in for Connections list */
   .slide-in {

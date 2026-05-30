@@ -67,6 +67,12 @@ module.exports = {
     				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
     				border: 'hsl(var(--sidebar-border))',
     				ring: 'hsl(var(--sidebar-ring))'
+    			},
+    			success: '#10B981',
+    			gold: '#F59E0B',
+    			navy: {
+    				DEFAULT: '#0F172A',
+    				foreground: '#FFFFFF'
     			}
     		},
     		borderRadius: {

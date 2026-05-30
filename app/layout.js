@@ -31,7 +31,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="light">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -45,7 +45,7 @@ export default function RootLayout({ children }) {
           </div>
         </noscript>
         {children}
-        <Toaster theme="dark" position="top-center" richColors closeButton />
+        <Toaster theme="light" position="top-center" richColors closeButton />
       </body>
     </html>
   )
