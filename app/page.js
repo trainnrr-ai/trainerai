@@ -155,12 +155,21 @@ function ProfileEditor({ user, profile, onSaved }) {
   }
   const removePhoto = (i) => update('photos', form.photos.filter((_, idx) => idx !== i))
   const handleFile = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (form.photos.length >= 5) { toast.error('Maximum 5 photos'); return }
-    compressImage(file, 800, 0.6).then(dataUrl => {
-      update('photos', [...form.photos, dataUrl])
-    }).catch(() => toast.error('Could not process image'))
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    const remaining = 5 - form.photos.length
+    if (remaining <= 0) { toast.error('Maximum 5 photos'); e.target.value = ''; return }
+    const toProcess = files.slice(0, remaining)
+    if (files.length > remaining) toast(`Only ${remaining} more photo${remaining > 1 ? 's' : ''} can be added`)
+    let currentPhotos = [...form.photos]
+    Promise.all(
+      toProcess.map(file =>
+        compressImage(file, 600, 0.5).then(dataUrl => {
+          currentPhotos = [...currentPhotos, dataUrl]
+          update('photos', currentPhotos)
+        }).catch(() => toast.error(`Could not process ${file.name}`))
+      )
+    )
     e.target.value = ''
   }
 
@@ -488,9 +497,9 @@ function PhotoEditorCard({ photos, setPhotos, photoUrl, setPhotoUrl, addPhoto, h
         })}
         {photos.length < 5 && (
           <label className="aspect-[3/4] rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-sky-500/50 hover:text-sky-500 transition cursor-pointer bg-slate-50">
-            <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+            <input type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
             <span className="text-3xl leading-none font-light">+</span>
-            <span className="text-[10px] uppercase tracking-wider mt-1 font-semibold">Add photo</span>
+            <span className="text-[10px] uppercase tracking-wider mt-1 font-semibold">Add photos</span>
           </label>
         )}
       </div>
@@ -836,7 +845,7 @@ function FiltersSheet({ filters, setFilters, onApply }) {
 function Discover() {
   const [filters, setFilters] = useState({ city: '', gym: '', goals: [], timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0, ageMin: 0, ageMax: 0 })
   const [profiles, setProfiles] = useState(null)
-  const [pagination, setPagination] = useState({ hasMore: false, nextOffset: 0, total: 0 })
+  const [pagination, setPagination] = useState({ hasMore: false, page: 0, total: 0 })
   const [loadingMore, setLoadingMore] = useState(false)
   const [reportProfile, setReportProfile] = useState(null)
   const [showLocPrompt, setShowLocPrompt] = useState(false)
@@ -873,12 +882,11 @@ function Discover() {
 
   const load = async (f = filters, opts = {}) => {
     const append = !!opts.append
-    const offset = append ? pagination.nextOffset : 0
+    const pageNum = append ? (pagination.page + 1) : 0
     if (append) setLoadingMore(true)
     else setProfiles(null)
     const params = new URLSearchParams()
-    params.set('limit', '20')
-    params.set('offset', String(offset))
+    params.set('page', String(pageNum))
     Object.entries(f).forEach(([k, v]) => {
       if (v == null || v === '' || v === 0) return
       if (Array.isArray(v)) {
@@ -892,7 +900,7 @@ function Discover() {
       const data = await res.json()
       const nextProfiles = data.profiles || []
       setProfiles(prev => append ? [...(prev || []), ...nextProfiles.filter(p => !(prev || []).some(x => x.id === p.id))] : nextProfiles)
-      setPagination(data.pagination || { hasMore: false, nextOffset: 0, total: nextProfiles.length })
+      setPagination({ hasMore: !!data.hasMore, page: data.page || pageNum, total: data.total || nextProfiles.length })
     } catch {
       if (!append) setProfiles([])
       toast.error('Could not load Discover')
@@ -911,7 +919,7 @@ function Discover() {
     }, { rootMargin: '700px 0px' })
     observer.observe(node)
     return () => observer.disconnect()
-  }, [profiles, pagination.hasMore, pagination.nextOffset, loadingMore, filters]) // eslint-disable-line
+  }, [profiles, pagination.hasMore, pagination.page, loadingMore, filters]) // eslint-disable-line
 
   const handleConnect = async (p) => {
     // Optimistic: remove the card from the feed immediately
