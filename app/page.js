@@ -158,7 +158,7 @@ function ProfileEditor({ user, profile, onSaved }) {
     const file = e.target.files?.[0]
     if (!file) return
     if (form.photos.length >= 5) { toast.error('Maximum 5 photos'); return }
-    compressImage(file, 1080, 0.78).then(dataUrl => {
+    compressImage(file, 800, 0.6).then(dataUrl => {
       update('photos', [...form.photos, dataUrl])
     }).catch(() => toast.error('Could not process image'))
     e.target.value = ''
@@ -1341,10 +1341,10 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
     if (file.size > 8 * 1024 * 1024) { toast.error('Image too large. Max 8MB.'); return }
     setUploadingImage(true)
     try {
-      const dataUri = await compressImage(file, 1280, 0.72)
-      const base64Body = dataUri.split(',')[1] || ''
-      const approxKb = Math.floor(base64Body.length * 0.75 / 1024)
-      if (approxKb > 580) { toast.error('Image too detailed — try a smaller one.'); return }
+      // Firebase doc limit is 1MB, so we compress aggressively
+      const dataUri = await compressImage(file, 800, 0.6)
+      if (!dataUri) throw new Error('Compression failed')
+      
       const res = await fetch('/api/messages', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

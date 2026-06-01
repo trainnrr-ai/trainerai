@@ -211,7 +211,7 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified, pro
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
-      <DialogContent className="bg-[#0a0b0d] border-white/10 max-w-md text-white">
+      <DialogContent className="bg-white border-slate-200 max-w-md text-slate-800">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sky-400">
             <Shield className="w-5 h-5" /> Identity Verification
@@ -220,18 +220,18 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified, pro
 
         {phase === 'loading-models' && (
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
-            <Loader2 className="w-10 h-10 animate-spin text-sky-400" />
-            <p className="text-sm text-white/80 font-medium">Setting up face verification...</p>
-            <p className="text-xs text-white/40">Loading face verification...</p>
+            <Loader2 className="w-10 h-10 animate-spin text-sky-500" />
+            <p className="text-sm text-slate-600 font-medium">Setting up face verification...</p>
+            <p className="text-xs text-slate-400">Loading face verification...</p>
           </div>
         )}
 
         {phase === 'camera-active' && (
           <div className="space-y-4">
-            <p className="text-xs text-white/60">
+            <p className="text-xs text-slate-500">
               Look straight at camera in good lighting. Position your face in the oval guide.
             </p>
-            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-black/40 border border-white/10">
+            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
               {error ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-3">
                   <X className="w-10 h-10 text-red-500" />
@@ -243,11 +243,11 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified, pro
               {!error && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
                   <div className="w-48 h-64 rounded-[50%] border-2 border-dashed border-sky-400/80 bg-transparent flex items-center justify-center">
-                    <span className="text-white/80 text-[10px] text-center px-3 font-semibold select-none bg-black/40 py-1 rounded-full backdrop-blur-sm">
+                    <span className="text-slate-700 text-[10px] text-center px-3 font-semibold select-none bg-white/80 py-1 rounded-full backdrop-blur-sm">
                       Position face here
                     </span>
                   </div>
-                  <p className="text-white/90 text-xs font-semibold mt-4 bg-black/60 px-4 py-1.5 rounded-full backdrop-blur-sm">
+                  <p className="text-slate-800 text-xs font-semibold mt-4 bg-white/90 px-4 py-1.5 rounded-full backdrop-blur-sm">
                     Position your face in the oval
                   </p>
                 </div>
@@ -263,16 +263,16 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified, pro
 
         {phase === 'processing' && (
           <div className="space-y-4">
-            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-black/40 border border-white/10">
+            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
               {snap && <img src={snap} alt="Selfie Preview" className="w-full h-full object-cover" />}
-              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4 text-white p-6">
-                <Loader2 className="w-10 h-10 animate-spin text-sky-400" />
-                <div className="w-full max-w-[200px] h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4 text-slate-800 p-6">
+                <Loader2 className="w-10 h-10 animate-spin text-sky-500" />
+                <div className="w-full max-w-[200px] h-1.5 bg-slate-200 rounded-full overflow-hidden">
                   <div className="h-full bg-sky-500 rounded-full animate-pulse w-4/5 mx-auto" />
                 </div>
                 <div className="text-center space-y-1">
-                  <p className="text-sm font-bold text-white">Comparing with your photos...</p>
-                  <p className="text-xs text-white/70">Analyzing face match...</p>
+                  <p className="text-sm font-bold text-slate-800">Comparing with your photos...</p>
+                  <p className="text-xs text-slate-500">Analyzing face match...</p>
                 </div>
               </div>
             </div>
@@ -281,12 +281,12 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified, pro
 
         {phase === 'success' && (
           <div className="flex flex-col items-center justify-center text-center p-6 space-y-4">
-            <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/30">
+            <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center border border-emerald-100">
               <CheckCircle2 className="w-10 h-10 text-emerald-500" />
             </div>
-            <h3 className="text-xl font-bold text-white">Identity Verified!</h3>
-            <p className="text-sm text-white/80">Match confidence: <span className="text-emerald-400 font-extrabold">{matchScore}%</span></p>
-            <p className="text-xs text-white/60 bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl max-w-xs leading-relaxed">
+            <h3 className="text-xl font-bold text-slate-800">Identity Verified!</h3>
+            <p className="text-sm text-slate-600">Match confidence: <span className="text-emerald-500 font-extrabold">{matchScore}%</span></p>
+            <p className="text-xs text-slate-500 bg-emerald-50/50 border border-emerald-100 p-3 rounded-xl max-w-xs leading-relaxed">
               You now have a verified badge on your profile. Your photos have been matched successfully.
             </p>
             <Button onClick={handleClose} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl h-11">
@@ -297,21 +297,21 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified, pro
 
         {phase === 'failed' && (
           <div className="flex flex-col items-center justify-center text-center p-6 space-y-4">
-            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/30">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center border border-red-100">
               <X className="w-10 h-10 text-red-500" />
             </div>
-            <h3 className="text-xl font-bold text-white">Face not recognized</h3>
+            <h3 className="text-xl font-bold text-slate-800">Face not recognized</h3>
             {error ? (
-              <p className="text-xs text-red-400 max-w-xs">{error}</p>
+              <p className="text-xs text-red-500 max-w-xs">{error}</p>
             ) : (
-              <p className="text-xs text-white/60 max-w-xs">
+              <p className="text-xs text-slate-500 max-w-xs">
                 Make sure your profile photos clearly show your face.
               </p>
             )}
             
-            <div className="text-left bg-white/[0.02] border border-white/[0.06] p-4 rounded-xl w-full space-y-2">
-              <p className="text-xs font-bold text-white/80">Tips for a better match:</p>
-              <ul className="text-[11px] text-white/60 space-y-1 pl-1">
+            <div className="text-left bg-slate-50 border border-slate-200 p-4 rounded-xl w-full space-y-2">
+              <p className="text-xs font-bold text-slate-700">Tips for a better match:</p>
+              <ul className="text-[11px] text-slate-500 space-y-1 pl-1">
                 <li className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-sky-500" /> Good lighting
                 </li>
@@ -328,7 +328,7 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified, pro
             </div>
             
             <div className="flex gap-2 w-full">
-              <Button onClick={handleClose} variant="outline" className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl h-11">
+              <Button onClick={handleClose} variant="outline" className="flex-1 bg-white border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl h-11">
                 Cancel
               </Button>
               <Button onClick={retake} className="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl h-11">
