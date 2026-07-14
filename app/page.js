@@ -52,6 +52,10 @@ const getProfileName = (p) => {
   return name
 }
 
+const AUTH_ERROR_MESSAGE = 'Login failed. Please try again.'
+const OTP_SEND_ERROR_MESSAGE = 'Could not send OTP. Please check the number and try again.'
+const OTP_VERIFY_ERROR_MESSAGE = 'Invalid or expired code. Please try again.'
+
 const getPhotoSrc = (photos, index = 0, fallback = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop') => {
   if (!photos || !Array.isArray(photos) || photos.length === 0) {
     return fallback
@@ -1305,17 +1309,25 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
   const typingTimerRef = useRef(null)
   const fileInputRef = useRef(null)
 
+  const mergeServerMessages = (serverMessages) => {
+    setMessages(prev => {
+      const serverClientIds = new Set(serverMessages.map(m => m.clientId).filter(Boolean))
+      const pending = prev.filter(m => m.pending && (!m.clientId || !serverClientIds.has(m.clientId)))
+      return [...serverMessages, ...pending].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+    })
+  }
+
   const load = async () => {
     try {
       const res = await fetch(`/api/messages?matchId=${match.id}`, { credentials: 'include' })
       const data = await res.json()
-      setMessages(data.messages || [])
+      mergeServerMessages(data.messages || [])
       setOtherTyping(!!data.otherTyping)
     } catch {}
   }
   useEffect(() => {
     load()
-    const t = setInterval(load, 2500)
+    const t = setInterval(load, 1000)
     return () => clearInterval(t)
   }, [match.id]) // eslint-disable-line
   useEffect(() => { scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: 'smooth' }) }, [messages, otherTyping])
@@ -1329,18 +1341,40 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
   const send = async () => {
     if (!text.trim()) return
     const t = text.trim()
+    const clientId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    const pendingMessage = {
+      id: clientId,
+      clientId,
+      matchId: match.id,
+      fromUserId: currentUserId,
+      text: t,
+      image: null,
+      kind: 'text',
+      flagged: false,
+      readBy: [currentUserId],
+      createdAt: new Date().toISOString(),
+      pending: true,
+    }
     setText('')
+    setMessages(prev => [...prev, pendingMessage])
     try {
-      const res = await fetch('/api/messages', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ matchId: match.id, text: t }) })
+      const res = await fetch('/api/messages', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ matchId: match.id, text: t, clientId }) })
       const data = await res.json()
       if (!res.ok) {
         if (res.status === 429) toast.error(data.error || 'Slow down')
         else toast.error(data.error || 'Failed to send')
+        setMessages(prev => prev.filter(m => m.id !== clientId))
+        setText(t)
         return
       }
       if (data.message?.flagged) toast.warning('Your message was flagged. Repeated violations lead to suspension.')
+      setMessages(prev => prev.map(m => m.clientId === clientId ? data.message : m))
       load()
-    } catch { toast.error('Failed to send') }
+    } catch {
+      setMessages(prev => prev.filter(m => m.id !== clientId))
+      setText(t)
+      toast.error('Failed to send')
+    }
   }
 
   const sendImage = async (file) => {
@@ -1352,18 +1386,35 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
       // Firebase doc limit is 1MB, so we compress aggressively
       const dataUri = await compressImage(file, 800, 0.6)
       if (!dataUri) throw new Error('Compression failed')
+      const clientId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      const pendingMessage = {
+        id: clientId,
+        clientId,
+        matchId: match.id,
+        fromUserId: currentUserId,
+        text: '',
+        image: dataUri,
+        kind: 'image',
+        flagged: false,
+        readBy: [currentUserId],
+        createdAt: new Date().toISOString(),
+        pending: true,
+      }
+      setMessages(prev => [...prev, pendingMessage])
       
       const res = await fetch('/api/messages', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ matchId: match.id, image: dataUri }),
+        body: JSON.stringify({ matchId: match.id, image: dataUri, clientId }),
       })
       const data = await res.json()
       if (!res.ok) {
         if (res.status === 429) toast.error(data.error || 'Slow down')
         else toast.error(data.error || 'Failed to send photo')
+        setMessages(prev => prev.filter(m => m.id !== clientId))
         return
       }
+      setMessages(prev => prev.map(m => m.clientId === clientId ? data.message : m))
       load()
     } catch (e) {
       toast.error(e?.message || 'Could not send photo')
@@ -1502,7 +1553,7 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
                     <div className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${hasImage ? 'px-3 pt-2 pb-0.5' : ''}`}>{m.text}</div>
                   )}
                   <div className={`text-[10px] ${hasImage ? 'px-3 pb-1.5 pt-0.5' : 'mt-1'} ${mine ? 'text-sky-100' : 'text-slate-400'} font-medium`}>
-                    {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {m.pending ? 'Sending...' : new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
               </div>
@@ -1922,7 +1973,7 @@ function App() {
           toast.success(`Welcome ${data.user.name?.split(' ')[0] || ''}!`)
         } catch (err) {
           console.error('[Auth] Google Login Error:', err)
-          toast.error(err.message || 'Google login failed')
+          toast.error(AUTH_ERROR_MESSAGE)
         }
       } else {
         setAuthModal({ open: true, tab: 'phone' })
@@ -1944,7 +1995,7 @@ function App() {
       toast.success('Verification code sent!')
     } catch (e) {
       console.error('[Auth] Failed to send OTP:', e)
-      toast.error(e.message || 'Failed to send OTP. Please check the number format.')
+      toast.error(OTP_SEND_ERROR_MESSAGE)
     } finally {
       setSendingOtp(false)
     }
@@ -1966,7 +2017,7 @@ function App() {
       toast.success(`Welcome ${data.user.name?.split(' ')[0] || ''}!`)
     } catch (e) {
       console.error('[Auth] Failed to verify OTP:', e)
-      toast.error(e.message || 'Invalid verification code')
+      toast.error(OTP_VERIFY_ERROR_MESSAGE)
     } finally {
       setVerifyingOtp(false)
     }
@@ -2010,9 +2061,8 @@ function App() {
           }
         } catch (e) {
           clearTimeout(timeout)
-          const msg = e.name === 'AbortError' ? 'Login timed out — please try again' : (e.message || 'Auth failed')
-          console.error('[Auth] Session flow error:', msg)
-          toast.error(msg)
+          console.error('[Auth] Session flow error:', e)
+          toast.error(e.name === 'AbortError' ? 'Login timed out. Please try again.' : AUTH_ERROR_MESSAGE)
           setView('landing')
         } finally {
           setLoading(false)
