@@ -36,6 +36,14 @@ const nextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: '/__/auth/:path*',
+        destination: `https://${process.env.FIREBASE_PROJECT_ID || 'trainr-1f76a'}.firebaseapp.com/__/auth/:path*`,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

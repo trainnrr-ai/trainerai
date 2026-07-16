@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -31,15 +32,22 @@ import SmartImg from '@/components/app/SmartImg'
 import VerificationBadge from '@/components/app/VerificationBadge'
 import NotificationBell from '@/components/app/NotificationBell'
 
-// Static / route-style views
-import Landing from '@/components/views/Landing'
-import AboutView from '@/components/views/AboutView'
-import PrivacyView from '@/components/views/PrivacyView'
-import ContactView from '@/components/views/ContactView'
-import SelfieVerifyDialog from '@/components/views/SelfieVerifyDialog'
-import AdminView from '@/components/views/AdminView'
-import PremiumDialog from '@/components/views/PremiumDialog'
-import ReportDialog from '@/components/views/ReportDialog'
+// Static / route-style views (dynamically loaded for fast initial open)
+const Landing = dynamic(() => import('@/components/views/Landing'), {
+  ssr: false,
+  loading: () => (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <Loader2 className="w-6 h-6 animate-spin text-sky-500" />
+    </div>
+  )
+})
+const AboutView = dynamic(() => import('@/components/views/AboutView'), { ssr: false })
+const PrivacyView = dynamic(() => import('@/components/views/PrivacyView'), { ssr: false })
+const ContactView = dynamic(() => import('@/components/views/ContactView'), { ssr: false })
+const SelfieVerifyDialog = dynamic(() => import('@/components/views/SelfieVerifyDialog'), { ssr: false })
+const AdminView = dynamic(() => import('@/components/views/AdminView'), { ssr: false })
+const PremiumDialog = dynamic(() => import('@/components/views/PremiumDialog'), { ssr: false })
+const ReportDialog = dynamic(() => import('@/components/views/ReportDialog'), { ssr: false })
 
 // Premium UI is hidden by default — flip NEXT_PUBLIC_PREMIUM_ENABLED=true to expose Pro CTA + Settings card.
 const PREMIUM_ENABLED = process.env.NEXT_PUBLIC_PREMIUM_ENABLED === 'true'
@@ -75,12 +83,12 @@ function Navbar({ user, view, setView, onOpenPremium, pendingIncomingCount = 0 }
           <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl overflow-hidden bg-slate-50 border border-slate-200 group-hover:border-sky-500/50 transition">
             <img src={LOGO} alt="Trainr" className="w-full h-full object-cover" loading="eager" decoding="async" width={36} height={36} />
           </div>
-          <span className="text-lg md:text-xl font-extrabold tracking-tight text-slate-800">Trainr</span>
+          <span className="text-lg md:text-xl font-extrabold tracking-tight text-slate-800 hidden sm:inline">Trainr</span>
         </button>
         {user ? (
           <nav className="flex items-center gap-1 md:gap-2">
-            <button onClick={() => setView('discover')} className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${view === 'discover' ? 'bg-slate-100 text-slate-800' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'}`}>Discover</button>
-            <button onClick={() => setView('matches')} className={`relative px-3 py-2 rounded-lg text-sm font-semibold transition ${view === 'matches' || view === 'chat' ? 'bg-slate-100 text-slate-800' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'}`}>
+            <button onClick={() => setView('discover')} className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition ${view === 'discover' ? 'bg-slate-100 text-slate-800' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'}`}>Discover</button>
+            <button onClick={() => setView('matches')} className={`relative px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition ${view === 'matches' || view === 'chat' ? 'bg-slate-100 text-slate-800' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'}`}>
               Connections
               {pendingIncomingCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#10B981] text-white text-[10px] font-extrabold flex items-center justify-center ring-2 ring-white">
