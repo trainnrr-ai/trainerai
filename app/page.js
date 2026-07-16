@@ -766,6 +766,7 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
 }
 
 function FiltersSheet({ filters, setFilters, onApply }) {
+  const [open, setOpen] = useState(false)
   const [local, setLocal] = useState(filters)
   useEffect(() => setLocal(filters), [filters])
   const set = (k, v) => setLocal(s => ({ ...s, [k]: v === '__any__' ? '' : v }))
@@ -777,7 +778,7 @@ function FiltersSheet({ filters, setFilters, onApply }) {
   }
   const blankFilters = { city: '', gym: '', goals: [], timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0, ageMin: 0, ageMax: 0 }
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="outline" className="rounded-full bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm">
           <Filter className="w-4 h-4 mr-2" /> Filters
@@ -845,8 +846,8 @@ function FiltersSheet({ filters, setFilters, onApply }) {
             <Switch id="vo" checked={local.verifiedOnly} onCheckedChange={v => set('verifiedOnly', v)} />
           </div>
           <div className="flex gap-2 pt-4">
-            <Button onClick={() => { setLocal(blankFilters); setFilters(blankFilters); onApply?.(blankFilters) }} variant="outline" className="flex-1 bg-white border-slate-200 text-slate-750 hover:bg-slate-50">Reset</Button>
-            <Button onClick={() => { setFilters(local); onApply?.(local) }} className="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-semibold shadow-sm transition active:scale-[0.98]">Apply</Button>
+            <Button onClick={() => { setLocal(blankFilters); setFilters(blankFilters); onApply?.(blankFilters); setOpen(false) }} variant="outline" className="flex-1 bg-white border-slate-200 text-slate-750 hover:bg-slate-50">Reset</Button>
+            <Button onClick={() => { setFilters(local); onApply?.(local); setOpen(false) }} className="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-semibold shadow-sm transition active:scale-[0.98]">Apply</Button>
           </div>
         </div>
       </SheetContent>
