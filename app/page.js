@@ -1471,7 +1471,7 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
   const otherActive = formatLastActive(match.otherProfile?.lastActiveAt)
 
   return (
-    <div className="pt-16 h-screen flex flex-col bg-slate-50">
+    <div className="h-dvh flex flex-col bg-slate-50">
       <div className="border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <Button onClick={onBack} variant="ghost" size="icon" className="rounded-full text-slate-650 hover:bg-slate-50"><ArrowLeft className="w-5 h-5" /></Button>
@@ -2151,7 +2151,9 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      <Navbar user={user} view={view} setView={setView} onOpenPremium={() => setShowPremium(true)} pendingIncomingCount={pendingIncomingCount} />
+      {view !== 'chat' && (
+        <Navbar user={user} view={view} setView={setView} onOpenPremium={() => setShowPremium(true)} pendingIncomingCount={pendingIncomingCount} />
+      )}
       {!user && view === 'landing' && <Landing onNav={setView} />}
       {!user && view === 'about' && <AboutView onNav={setView} />}
       {!user && view === 'privacy' && <PrivacyView onNav={setView} />}
