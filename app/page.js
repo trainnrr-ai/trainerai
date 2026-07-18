@@ -1978,6 +1978,7 @@ function App() {
           const data = await loginWithFirebaseGoogle()
           setUser(data.user)
           setProfile(data.profile)
+          try { localStorage.setItem('trainr_logged_in', '1') } catch {}
           setView(data.profile ? 'discover' : 'profile-edit')
           toast.success(`Welcome ${data.user.name?.split(' ')[0] || ''}!`)
         } catch (err) {
@@ -2018,6 +2019,7 @@ function App() {
       const data = await confirmFirebasePhoneOtp(confirmationResult, otp)
       setUser(data.user)
       setProfile(data.profile)
+      try { localStorage.setItem('trainr_logged_in', '1') } catch {}
       setView(data.profile ? 'discover' : 'profile-edit')
       setAuthModal({ open: false, tab: 'phone' })
       setAuthStep(1)
@@ -2058,6 +2060,7 @@ function App() {
           console.log('[Auth] Session API response:', res.status, data.user?.email || 'no user')
           if (!res.ok) throw new Error(data.error || 'Auth failed')
           setUser(data.user)
+          try { localStorage.setItem('trainr_logged_in', '1') } catch {}
           setView(data.hasProfile ? 'discover' : 'profile-edit')
           toast.success(`Welcome ${data.user.name?.split(' ')[0]}!`)
           try {
@@ -2080,7 +2083,16 @@ function App() {
       return
     }
     // No session_id hash — check for existing cookie session
-    console.log('[Auth] No session_id in hash, checking /api/auth/me...')
+    try {
+      if (localStorage.getItem('trainr_logged_in') !== '1') {
+        console.log('[Auth] No session_id or login flag — showing landing immediately')
+        setLoading(false)
+        setView('landing')
+        return
+      }
+    } catch {}
+    
+    console.log('[Auth] Login flag found, checking /api/auth/me...')
     const meController = new AbortController()
     const meTimeout = setTimeout(() => {
       console.warn('[Auth] /api/auth/me timed out after 15s — aborting')
@@ -2095,9 +2107,12 @@ function App() {
           console.log('[Auth] Existing session found for:', data.user.email)
           setUser(data.user)
           setProfile(data.profile)
+          try { localStorage.setItem('trainr_logged_in', '1') } catch {}
           setView(data.profile ? 'discover' : 'profile-edit')
         } else {
           console.log('[Auth] No existing session')
+          try { localStorage.removeItem('trainr_logged_in') } catch {}
+          setView('landing')
         }
       } catch (e) {
         clearTimeout(meTimeout)
@@ -2109,13 +2124,17 @@ function App() {
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+    try { localStorage.removeItem('trainr_logged_in') } catch {}
     setUser(null); setProfile(null); setView('landing')
     toast.success('Logged out')
   }
 
   const handleProfileSaved = (p) => { setProfile(p); setView('discover') }
   const handlePremiumUpgraded = (data) => { setUser(u => u ? { ...u, tier: data.tier } : u) }
-  const handleAccountDeleted = () => { setUser(null); setProfile(null); setActiveChat(null); setView('landing') }
+  const handleAccountDeleted = () => {
+    try { localStorage.removeItem('trainr_logged_in') } catch {}
+    setUser(null); setProfile(null); setActiveChat(null); setView('landing')
+  }
   const handleChatRemoved = () => { setActiveChat(null); setView('matches') }
 
   // Loading screen timeout — show retry button after 10 seconds
