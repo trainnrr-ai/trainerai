@@ -7,7 +7,17 @@ const nextConfig = {
     // Remove if not using Server Components
     serverComponentsExternalPackages: ['mongodb', 'firebase-admin'],
   },
-  webpack(config, { dev }) {
+  webpack(config, { dev, isServer, webpack }) {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      encoding: false,
+    };
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+      };
+    }
     if (dev) {
       // Reduce CPU/memory from file watching
       config.watchOptions = {
