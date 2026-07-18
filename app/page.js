@@ -865,6 +865,57 @@ function Discover() {
   const [showLocPrompt, setShowLocPrompt] = useState(false)
   const loadMoreRef = useRef(null)
 
+  const [isOnline, setIsOnline] = useState(true)
+
+  // 1. Sync pending requests in background when coming back online
+  const syncOfflineRequests = async () => {
+    try {
+      const queue = JSON.parse(localStorage.getItem('trainr_offline_requests') || '[]')
+      if (!queue.length) return
+      
+      // Clear queue first to prevent double clicks or race conditions on sync
+      localStorage.setItem('trainr_offline_requests', '[]')
+      
+      for (const item of queue) {
+        try {
+          await fetch('/api/profiles/connect', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ profileId: item.profileId }),
+          })
+        } catch (e) {
+          // Re-queue on failure
+          const currentQueue = JSON.parse(localStorage.getItem('trainr_offline_requests') || '[]')
+          if (!currentQueue.some(x => x.profileId === item.profileId)) {
+            currentQueue.push(item)
+            localStorage.setItem('trainr_offline_requests', JSON.stringify(currentQueue))
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 2. Track connection status
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setIsOnline(navigator.onLine)
+    const handleOnline = () => {
+      setIsOnline(true)
+      syncOfflineRequests()
+    }
+    const handleOffline = () => {
+      setIsOnline(false)
+      toast.error('Internet disconnected.')
+    }
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
   useEffect(() => {
     try {
       const decided = localStorage.getItem('trainr_loc_decided')
@@ -899,6 +950,28 @@ function Discover() {
     const pageNum = append ? (pagination.page + 1) : 0
     if (append) setLoadingMore(true)
     else setProfiles(null)
+
+    // Load from local storage backup if offline
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+      if (append) {
+        setLoadingMore(false)
+        return
+      }
+      try {
+        const cachedStr = localStorage.getItem('trainr_cached_discover_profiles')
+        if (cachedStr) {
+          const cached = JSON.parse(cachedStr)
+          setProfiles(cached)
+          setPagination({ hasMore: false, page: 0, total: cached.length })
+          setLoadingMore(false)
+          return
+        }
+      } catch {}
+      setProfiles([])
+      setLoadingMore(false)
+      return
+    }
+
     const params = new URLSearchParams()
     params.set('page', String(pageNum))
     Object.entries(f).forEach(([k, v]) => {
@@ -913,7 +986,14 @@ function Discover() {
       const res = await fetch('/api/profiles/discover?' + params.toString(), { credentials: 'include' })
       const data = await res.json()
       const nextProfiles = data.profiles || []
-      setProfiles(prev => append ? [...(prev || []), ...nextProfiles.filter(p => !(prev || []).some(x => x.id === p.id))] : nextProfiles)
+      setProfiles(prev => {
+        const merged = append ? [...(prev || []), ...nextProfiles.filter(p => !(prev || []).some(x => x.id === p.id))] : nextProfiles
+        // Cache the first page profiles locally as backup
+        if (!append) {
+          try { localStorage.setItem('trainr_cached_discover_profiles', JSON.stringify(merged)) } catch {}
+        }
+        return merged
+      })
       setPagination({ hasMore: !!data.hasMore, page: data.page || pageNum, total: data.total || nextProfiles.length })
     } catch {
       if (!append) setProfiles([])
@@ -938,6 +1018,20 @@ function Discover() {
   const handleConnect = async (p) => {
     // Optimistic: remove the card from the feed immediately
     setProfiles(prev => (prev || []).filter(x => x.id !== p.id))
+
+    // Handle offline connect requests queueing
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+      try {
+        const queue = JSON.parse(localStorage.getItem('trainr_offline_requests') || '[]')
+        if (!queue.some(x => x.profileId === p.id)) {
+          queue.push({ profileId: p.id, timestamp: Date.now() })
+          localStorage.setItem('trainr_offline_requests', JSON.stringify(queue))
+        }
+        toast.info('Action queued. Will sync when online.')
+      } catch {}
+      return
+    }
+
     try {
       const res = await fetch('/api/profiles/connect', {
         method: 'POST', credentials: 'include',
