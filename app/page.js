@@ -26,6 +26,7 @@ import {
 // Shared constants & utilities
 import { LOGO, INSTAGRAM_URL, GOALS, TIMINGS, LEVELS, GENDERS, CITIES } from '@/lib/client/constants'
 import { loginWithGoogle, compressImage, formatLastActive } from '@/lib/client/utils'
+import { loginWithFirebaseGoogle, sendFirebasePhoneOtp, confirmFirebasePhoneOtp } from '@/lib/client/firebaseAuth'
 
 // Reusable components
 import SmartImg from '@/components/app/SmartImg'
@@ -1974,7 +1975,6 @@ function App() {
       const tab = e.detail?.tab || 'phone'
       if (tab === 'google') {
         try {
-          const { loginWithFirebaseGoogle } = await import('@/lib/client/firebaseAuth')
           const data = await loginWithFirebaseGoogle()
           setUser(data.user)
           setProfile(data.profile)
@@ -1998,7 +1998,6 @@ function App() {
     if (!phoneNumber.trim()) return
     setSendingOtp(true)
     try {
-      const { sendFirebasePhoneOtp } = await import('@/lib/client/firebaseAuth')
       const result = await sendFirebasePhoneOtp(phoneNumber.trim(), 'firebase-recaptcha')
       setConfirmationResult(result)
       setAuthStep(2)
@@ -2015,7 +2014,6 @@ function App() {
     if (!confirmationResult || otp.length !== 6) return
     setVerifyingOtp(true)
     try {
-      const { confirmFirebasePhoneOtp } = await import('@/lib/client/firebaseAuth')
       const data = await confirmFirebasePhoneOtp(confirmationResult, otp)
       setUser(data.user)
       setProfile(data.profile)
