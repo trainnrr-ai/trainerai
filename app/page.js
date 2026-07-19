@@ -2072,7 +2072,11 @@ function App() {
           const data = await loginWithFirebaseGoogle()
           setUser(data.user)
           setProfile(data.profile)
-          try { localStorage.setItem('trainr_logged_in', '1') } catch {}
+          try {
+            localStorage.setItem('trainr_logged_in', '1')
+            localStorage.setItem('trainr_cached_user', JSON.stringify(data.user))
+            localStorage.setItem('trainr_cached_profile', JSON.stringify(data.profile || null))
+          } catch {}
           setView(data.profile ? 'discover' : 'profile-edit')
           toast.success(`Welcome ${data.user.name?.split(' ')[0] || ''}!`)
         } catch (err) {
@@ -2111,7 +2115,11 @@ function App() {
       const data = await confirmFirebasePhoneOtp(confirmationResult, otp)
       setUser(data.user)
       setProfile(data.profile)
-      try { localStorage.setItem('trainr_logged_in', '1') } catch {}
+      try {
+        localStorage.setItem('trainr_logged_in', '1')
+        localStorage.setItem('trainr_cached_user', JSON.stringify(data.user))
+        localStorage.setItem('trainr_cached_profile', JSON.stringify(data.profile || null))
+      } catch {}
       setView(data.profile ? 'discover' : 'profile-edit')
       setAuthModal({ open: false, tab: 'phone' })
       setAuthStep(1)
@@ -2152,7 +2160,11 @@ function App() {
           console.log('[Auth] Session API response:', res.status, data.user?.email || 'no user')
           if (!res.ok) throw new Error(data.error || 'Auth failed')
           setUser(data.user)
-          try { localStorage.setItem('trainr_logged_in', '1') } catch {}
+          try {
+            localStorage.setItem('trainr_logged_in', '1')
+            localStorage.setItem('trainr_cached_user', JSON.stringify(data.user))
+            localStorage.setItem('trainr_cached_profile', JSON.stringify(data.profile || null))
+          } catch {}
           setView(data.hasProfile ? 'discover' : 'profile-edit')
           toast.success(`Welcome ${data.user.name?.split(' ')[0]}!`)
           try {
@@ -2182,6 +2194,15 @@ function App() {
         setView('landing')
         return
       }
+      // Optimistic offline hydration: restore UI instantly from cache
+      const cachedUser = localStorage.getItem('trainr_cached_user')
+      const cachedProfile = localStorage.getItem('trainr_cached_profile')
+      if (cachedUser) {
+        setUser(JSON.parse(cachedUser))
+        if (cachedProfile && cachedProfile !== 'null') setProfile(JSON.parse(cachedProfile))
+        setView(cachedProfile && cachedProfile !== 'null' ? 'discover' : 'profile-edit')
+        setLoading(false)
+      }
     } catch {}
     
     console.log('[Auth] Login flag found, checking /api/auth/me...')
@@ -2199,11 +2220,21 @@ function App() {
           console.log('[Auth] Existing session found for:', data.user.email)
           setUser(data.user)
           setProfile(data.profile)
-          try { localStorage.setItem('trainr_logged_in', '1') } catch {}
+          try {
+            localStorage.setItem('trainr_logged_in', '1')
+            localStorage.setItem('trainr_cached_user', JSON.stringify(data.user))
+            localStorage.setItem('trainr_cached_profile', JSON.stringify(data.profile || null))
+          } catch {}
           setView(data.profile ? 'discover' : 'profile-edit')
         } else {
           console.log('[Auth] No existing session')
-          try { localStorage.removeItem('trainr_logged_in') } catch {}
+          try {
+            localStorage.removeItem('trainr_logged_in')
+            localStorage.removeItem('trainr_cached_user')
+            localStorage.removeItem('trainr_cached_profile')
+          } catch {}
+          setUser(null)
+          setProfile(null)
           setView('landing')
         }
       } catch (e) {
@@ -2216,15 +2247,32 @@ function App() {
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
-    try { localStorage.removeItem('trainr_logged_in') } catch {}
+    try {
+      localStorage.removeItem('trainr_logged_in')
+      localStorage.removeItem('trainr_cached_user')
+      localStorage.removeItem('trainr_cached_profile')
+    } catch {}
     setUser(null); setProfile(null); setView('landing')
     toast.success('Logged out')
   }
 
-  const handleProfileSaved = (p) => { setProfile(p); setView('discover') }
-  const handlePremiumUpgraded = (data) => { setUser(u => u ? { ...u, tier: data.tier } : u) }
+  const handleProfileSaved = (p) => {
+    try { localStorage.setItem('trainr_cached_profile', JSON.stringify(p)) } catch {}
+    setProfile(p); setView('discover')
+  }
+  const handlePremiumUpgraded = (data) => {
+    setUser(u => {
+      const nextU = u ? { ...u, tier: data.tier } : u
+      try { localStorage.setItem('trainr_cached_user', JSON.stringify(nextU)) } catch {}
+      return nextU
+    })
+  }
   const handleAccountDeleted = () => {
-    try { localStorage.removeItem('trainr_logged_in') } catch {}
+    try {
+      localStorage.removeItem('trainr_logged_in')
+      localStorage.removeItem('trainr_cached_user')
+      localStorage.removeItem('trainr_cached_profile')
+    } catch {}
     setUser(null); setProfile(null); setActiveChat(null); setView('landing')
   }
   const handleChatRemoved = () => { setActiveChat(null); setView('matches') }
