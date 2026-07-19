@@ -2068,6 +2068,7 @@ function App() {
     const handleOpenAuth = async (e) => {
       const tab = e.detail?.tab || 'phone'
       if (tab === 'google') {
+        setLoading(true)
         try {
           const data = await loginWithFirebaseGoogle()
           setUser(data.user)
@@ -2082,6 +2083,8 @@ function App() {
         } catch (err) {
           console.error('[Auth] Google Login Error:', err)
           toast.error(AUTH_ERROR_MESSAGE)
+        } finally {
+          setLoading(false)
         }
       } else {
         setAuthModal({ open: true, tab: 'phone' })
