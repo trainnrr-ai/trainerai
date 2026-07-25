@@ -50,7 +50,7 @@ const nextConfig = {
     return [
       {
         source: '/__/auth/:path*',
-        destination: `https://${process.env.FIREBASE_PROJECT_ID || 'trainr-1f76a'}.firebaseapp.com/__/auth/:path*`,
+        destination: `https://${process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'trainerai-prod-d55a8'}.firebaseapp.com/__/auth/:path*`,
       },
     ];
   },
