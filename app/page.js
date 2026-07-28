@@ -584,7 +584,7 @@ function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
   }
 
   return (
-    <div className="snap-start min-h-[calc(100vh-4rem)] flex items-center py-3 md:py-6 fade-up" style={{ animationDelay: `${Math.min(index * 0.05, 0.3)}s` }}>
+    <div className="w-full max-w-md mx-auto py-2 md:py-4 fade-up" style={{ animationDelay: `${Math.min(index * 0.05, 0.3)}s` }}>
       <Card 
         onClick={() => setSheetOpen(true)}
         className="bg-white border border-slate-200/80 overflow-hidden w-full max-w-md mx-auto rounded-3xl shadow-lg hover:border-slate-350 transition-all cursor-pointer"
@@ -1005,15 +1005,13 @@ function Discover() {
 
   useEffect(() => { load() }, []) // eslint-disable-line
 
+  // Batch prefetching: when remaining card profiles are less than 3, fetch the next page in the background.
   useEffect(() => {
-    const node = loadMoreRef.current
-    if (!node || !profiles || !pagination.hasMore || loadingMore) return
-    const observer = new IntersectionObserver(entries => {
-      if (entries.some(e => e.isIntersecting)) load(filters, { append: true })
-    }, { rootMargin: '700px 0px' })
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [profiles, pagination.hasMore, pagination.page, loadingMore, filters]) // eslint-disable-line
+    if (profiles && profiles.length < 3 && pagination.hasMore && !loadingMore) {
+      console.log('[Discover] Prefetching next batch of profiles (remaining count is low)...')
+      load(filters, { append: true })
+    }
+  }, [profiles, pagination.hasMore, loadingMore, filters]) // eslint-disable-line
 
   const handleConnect = async (p) => {
     // Optimistic: remove the card from the feed immediately
@@ -1096,9 +1094,9 @@ function Discover() {
         </div>
       )}
 
-      <div className="max-w-md mx-auto px-4 snap-y snap-mandatory">
+      <div className="max-w-md mx-auto px-4 py-4 min-h-[calc(100vh-10rem)] flex flex-col justify-center">
         {profiles === null && (
-          <div className="space-y-4 pt-6">
+          <div className="space-y-4">
             <div className="rounded-3xl overflow-hidden bg-white border border-slate-200/80 shadow-md">
               <div className="aspect-[4/5] bg-gradient-to-br from-sky-500/5 via-slate-100 to-sky-500/2 animate-shimmer" />
               <div className="p-5 space-y-3">
@@ -1116,16 +1114,8 @@ function Discover() {
         {profiles && profiles.length === 0 && (
           <EmptyDiscover onResetFilters={() => load({ city: '', gym: '', goals: [], timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0, ageMin: 0, ageMax: 0 })} />
         )}
-        {profiles?.map(p => (
-          <ProfileCard key={p.id} profile={p} onLike={handleConnect} onSkip={handleSkip} onReport={setReportProfile} />
-        ))}
-        {profiles && pagination.hasMore && (
-          <div ref={loadMoreRef} className="py-6">
-            <div className="rounded-2xl bg-white border border-slate-200/85 p-4 flex items-center justify-center gap-2 text-sm text-slate-500 shadow-sm">
-              <Loader2 className={`w-4 h-4 text-sky-500 ${loadingMore ? 'animate-spin' : ''}`} />
-              {loadingMore ? 'Loading more partners...' : 'Scroll for more partners'}
-            </div>
-          </div>
+        {profiles && profiles.length > 0 && (
+          <ProfileCard key={profiles[0].id} profile={profiles[0]} onLike={handleConnect} onSkip={handleSkip} onReport={setReportProfile} />
         )}
       </div>
 
@@ -2200,10 +2190,23 @@ function App() {
       // Optimistic offline hydration: restore UI instantly from cache
       const cachedUser = localStorage.getItem('trainr_cached_user')
       const cachedProfile = localStorage.getItem('trainr_cached_profile')
+      const savedView = localStorage.getItem('trainr_current_view')
+      const savedChat = localStorage.getItem('trainr_active_chat')
       if (cachedUser) {
         setUser(JSON.parse(cachedUser))
         if (cachedProfile && cachedProfile !== 'null') setProfile(JSON.parse(cachedProfile))
-        setView(cachedProfile && cachedProfile !== 'null' ? 'discover' : 'profile-edit')
+        
+        let initialView = cachedProfile && cachedProfile !== 'null' ? 'discover' : 'profile-edit'
+        if (savedView && ['discover', 'matches', 'profile-edit', 'admin', 'settings'].includes(savedView)) {
+          initialView = savedView
+        }
+        if (savedChat && savedChat !== 'null') {
+          try {
+            setActiveChat(JSON.parse(savedChat))
+            initialView = 'chat'
+          } catch {}
+        }
+        setView(initialView)
         setLoading(false)
       }
     } catch {}
@@ -2228,13 +2231,27 @@ function App() {
             localStorage.setItem('trainr_cached_user', JSON.stringify(data.user))
             localStorage.setItem('trainr_cached_profile', JSON.stringify(data.profile || null))
           } catch {}
-          setView(data.profile ? 'discover' : 'profile-edit')
+          
+          const savedView = localStorage.getItem('trainr_current_view')
+          const savedChat = localStorage.getItem('trainr_active_chat')
+          if (savedChat && savedChat !== 'null') {
+            try {
+              setActiveChat(JSON.parse(savedChat))
+              setView('chat')
+            } catch {}
+          } else if (savedView && ['discover', 'matches', 'profile-edit', 'admin', 'settings'].includes(savedView)) {
+            setView(savedView)
+          } else {
+            setView(data.profile ? 'discover' : 'profile-edit')
+          }
         } else {
           console.log('[Auth] No existing session')
           try {
             localStorage.removeItem('trainr_logged_in')
             localStorage.removeItem('trainr_cached_user')
             localStorage.removeItem('trainr_cached_profile')
+            localStorage.removeItem('trainr_current_view')
+            localStorage.removeItem('trainr_active_chat')
           } catch {}
           setUser(null)
           setProfile(null)
@@ -2248,12 +2265,28 @@ function App() {
     })()
   }, [])
 
+  // Auto-persist current view & active chat on any changes
+  useEffect(() => {
+    if (view && view !== 'landing') {
+      try {
+        localStorage.setItem('trainr_current_view', view)
+        if (view === 'chat' && activeChat) {
+          localStorage.setItem('trainr_active_chat', JSON.stringify(activeChat))
+        } else if (view !== 'chat') {
+          localStorage.removeItem('trainr_active_chat')
+        }
+      } catch {}
+    }
+  }, [view, activeChat])
+
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
     try {
       localStorage.removeItem('trainr_logged_in')
       localStorage.removeItem('trainr_cached_user')
       localStorage.removeItem('trainr_cached_profile')
+      localStorage.removeItem('trainr_current_view')
+      localStorage.removeItem('trainr_active_chat')
     } catch {}
     setUser(null); setProfile(null); setView('landing')
     toast.success('Logged out')
@@ -2275,6 +2308,8 @@ function App() {
       localStorage.removeItem('trainr_logged_in')
       localStorage.removeItem('trainr_cached_user')
       localStorage.removeItem('trainr_cached_profile')
+      localStorage.removeItem('trainr_current_view')
+      localStorage.removeItem('trainr_active_chat')
     } catch {}
     setUser(null); setProfile(null); setActiveChat(null); setView('landing')
   }
