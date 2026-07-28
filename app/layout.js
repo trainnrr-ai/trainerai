@@ -8,9 +8,9 @@ export const metadata = {
   title: 'Trainr — Built for accountability, not dating',
   description: "Find verified gym partners nearby, matched by goals, schedule and experience. India's premium fitness accountability network.",
   icons: {
-    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
-    apple: [{ url: '/apple-touch-icon.svg' }],
-    shortcut: [{ url: '/favicon.svg' }],
+    icon: [{ url: '/favicon.svg?v=2', type: 'image/svg+xml' }],
+    apple: [{ url: '/apple-touch-icon.svg?v=2' }],
+    shortcut: [{ url: '/favicon.svg?v=2' }],
   },
   openGraph: {
     title: 'Trainr — Built for accountability, not dating',
