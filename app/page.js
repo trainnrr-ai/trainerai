@@ -1345,17 +1345,40 @@ function RequestsTab({ onAccepted }) {
 }
 
 function Connections({ onOpenChat }) {
-  const [matches, setMatches] = useState(null)
-  const [pendingIncomingCount, setPendingIncomingCount] = useState(0)
+  const [matches, setMatches] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('trainr_cached_matches')
+        if (cached) return JSON.parse(cached)
+      } catch {}
+    }
+    return null
+  })
+  const [pendingIncomingCount, setPendingIncomingCount] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const count = localStorage.getItem('trainr_cached_pending_count')
+        if (count) return parseInt(count, 10)
+      } catch {}
+    }
+    return 0
+  })
   const [tab, setTab] = useState('chats')
 
   const loadMatches = async () => {
     try {
       const r = await fetch('/api/matches', { credentials: 'include' })
       const d = await r.json()
-      setMatches(d.matches || [])
+      const list = d.matches || []
+      setMatches(list)
       setPendingIncomingCount(d.pendingIncomingCount || 0)
-    } catch { setMatches([]) }
+      try {
+        localStorage.setItem('trainr_cached_matches', JSON.stringify(list))
+        localStorage.setItem('trainr_cached_pending_count', String(d.pendingIncomingCount || 0))
+      } catch {}
+    } catch {
+      if (matches === null) setMatches([])
+    }
   }
   useEffect(() => { loadMatches() }, [])
 
@@ -1390,7 +1413,15 @@ function Connections({ onOpenChat }) {
 }
 
 function Chat({ match, currentUserId, onBack, onChatRemoved }) {
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem(`trainr_cached_msgs_${match.id}`)
+        if (cached) return JSON.parse(cached)
+      } catch {}
+    }
+    return []
+  })
   const [otherTyping, setOtherTyping] = useState(false)
   const [text, setText] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -1407,7 +1438,11 @@ function Chat({ match, currentUserId, onBack, onChatRemoved }) {
     setMessages(prev => {
       const serverClientIds = new Set(serverMessages.map(m => m.clientId).filter(Boolean))
       const pending = prev.filter(m => m.pending && (!m.clientId || !serverClientIds.has(m.clientId)))
-      return [...serverMessages, ...pending].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+      const merged = [...serverMessages, ...pending].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+      try {
+        localStorage.setItem(`trainr_cached_msgs_${match.id}`, JSON.stringify(serverMessages))
+      } catch {}
+      return merged
     })
   }
 
@@ -2287,6 +2322,15 @@ function App() {
       localStorage.removeItem('trainr_cached_profile')
       localStorage.removeItem('trainr_current_view')
       localStorage.removeItem('trainr_active_chat')
+      localStorage.removeItem('trainr_cached_matches')
+      localStorage.removeItem('trainr_cached_pending_count')
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith('trainr_cached_msgs_')) {
+          localStorage.removeItem(key)
+          i--
+        }
+      }
     } catch {}
     setUser(null); setProfile(null); setView('landing')
     toast.success('Logged out')
@@ -2310,6 +2354,15 @@ function App() {
       localStorage.removeItem('trainr_cached_profile')
       localStorage.removeItem('trainr_current_view')
       localStorage.removeItem('trainr_active_chat')
+      localStorage.removeItem('trainr_cached_matches')
+      localStorage.removeItem('trainr_cached_pending_count')
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith('trainr_cached_msgs_')) {
+          localStorage.removeItem(key)
+          i--
+        }
+      }
     } catch {}
     setUser(null); setProfile(null); setActiveChat(null); setView('landing')
   }
