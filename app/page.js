@@ -948,26 +948,28 @@ function Discover() {
   const load = async (f = filters, opts = {}) => {
     const append = !!opts.append
     const pageNum = append ? (pagination.page + 1) : 0
-    if (append) setLoadingMore(true)
-    else setProfiles(null)
+    setLoadingMore(true)
 
-    // Load from local storage backup if offline
-    if (typeof window !== 'undefined' && !navigator.onLine) {
-      if (append) {
-        setLoadingMore(false)
-        return
-      }
+    if (!append) {
+      let hasCache = false
       try {
         const cachedStr = localStorage.getItem('trainr_cached_discover_profiles')
         if (cachedStr) {
           const cached = JSON.parse(cachedStr)
-          setProfiles(cached)
-          setPagination({ hasMore: false, page: 0, total: cached.length })
-          setLoadingMore(false)
-          return
+          if (cached && cached.length > 0) {
+            setProfiles(cached)
+            setPagination({ hasMore: true, page: 0, total: cached.length })
+            hasCache = true
+          }
         }
       } catch {}
-      setProfiles([])
+      if (!hasCache) {
+        setProfiles(null)
+      }
+    }
+
+    // Load from local storage backup if offline
+    if (typeof window !== 'undefined' && !navigator.onLine) {
       setLoadingMore(false)
       return
     }
@@ -994,9 +996,9 @@ function Discover() {
         }
         return merged
       })
-      setPagination({ hasMore: !!data.hasMore, page: data.page || pageNum, total: data.total || nextProfiles.length })
+      setPagination({ hasMore: !!data.hasMore, page: pageNum, total: data.total || nextProfiles.length })
     } catch {
-      if (!append) setProfiles([])
+      if (!append && !profiles) setProfiles([])
       toast.error('Could not load Discover')
     } finally {
       setLoadingMore(false)
@@ -1115,7 +1117,12 @@ function Discover() {
           <EmptyDiscover onResetFilters={() => load({ city: '', gym: '', goals: [], timing: '', gender: '', level: '', verifiedOnly: false, maxDistance: 0, ageMin: 0, ageMax: 0 })} />
         )}
         {profiles && profiles.length > 0 && (
-          <ProfileCard key={profiles[0].id} profile={profiles[0]} onLike={handleConnect} onSkip={handleSkip} onReport={setReportProfile} />
+          <>
+            <ProfileCard key={profiles[0].id} profile={profiles[0]} onLike={handleConnect} onSkip={handleSkip} onReport={setReportProfile} />
+            {profiles.length > 1 && (
+              <img src={getPhotoSrc(profiles[1].photos, 0)} className="hidden" aria-hidden="true" />
+            )}
+          </>
         )}
       </div>
 
