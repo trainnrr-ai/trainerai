@@ -76,7 +76,7 @@ const getPhotoSrc = (photos, index = 0, fallback = 'https://images.unsplash.com/
   return photo
 }
 
-function Navbar({ user, view, setView, onOpenPremium, pendingIncomingCount = 0 }) {
+function Navbar({ user, profile, view, setView, onOpenPremium, pendingIncomingCount = 0 }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
@@ -110,8 +110,10 @@ function Navbar({ user, view, setView, onOpenPremium, pendingIncomingCount = 0 }
             )}
             <button onClick={() => setView('settings')} className="ml-1 w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition overflow-hidden ring-1 ring-slate-200 hover:ring-sky-500/40">
               <Avatar className="w-9 h-9">
-                <AvatarImage src={user.picture} />
-                <AvatarFallback className="bg-sky-100 text-sky-600 text-xs font-semibold">{(user.name || 'U').slice(0,1)}</AvatarFallback>
+                <AvatarImage src={profile?.photos?.[0] || user.picture} className="object-cover" />
+                <AvatarFallback className="bg-sky-100 text-sky-600 text-xs font-semibold">
+                  {((profile?.name || user.name || 'U').replace(/^\+/, '') || 'U').slice(0, 1).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
             </button>
           </nav>
@@ -2409,7 +2411,7 @@ function App() {
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       {view !== 'chat' && (
-        <Navbar user={user} view={view} setView={setView} onOpenPremium={() => setShowPremium(true)} pendingIncomingCount={pendingIncomingCount} />
+        <Navbar user={user} profile={profile} view={view} setView={setView} onOpenPremium={() => setShowPremium(true)} pendingIncomingCount={pendingIncomingCount} />
       )}
       {!user && view === 'landing' && <Landing onNav={setView} />}
       {!user && view === 'about' && <AboutView onNav={setView} />}
