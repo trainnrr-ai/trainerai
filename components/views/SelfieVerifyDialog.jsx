@@ -13,7 +13,7 @@ function loadFaceApiModels() {
   if (!modelsPromise) {
     const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model'
     modelsPromise = Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
       faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ])
@@ -88,9 +88,9 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified, pro
     setError(null)
 
     try {
-      // 1. Get face descriptor from selfie
+      // 1. Get face descriptor from selfie (uses SSD Mobilenet v1 for high accuracy)
       const selfieDetection = await faceapi
-        .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
+        .detectSingleFace(canvas)
         .withFaceLandmarks()
         .withFaceDescriptor()
 
@@ -111,7 +111,7 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified, pro
         try {
           const img = await loadImg(photoUrl)
           const detection = await faceapi
-            .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+            .detectSingleFace(img)
             .withFaceLandmarks()
             .withFaceDescriptor()
 
@@ -131,18 +131,15 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified, pro
         throw new Error('No face detected in your profile photos. Make sure your profile photos clearly show your face.')
       }
 
-      // 3. Matching logic
-      // distance < 0.5 → Strong match
-      // distance < 0.6 → Good match
-      // distance >= 0.6 → No match
+      // 3. Matching logic (SSD Mobilenet v1 is highly accurate; threshold 0.55 ensures strict matching)
       const distance = bestDistance
-      const verified = distance < 0.6
+      const verified = distance < 0.55
       
       // Calculate match score percentage
       let score = Math.round((1 - distance) * 100)
       if (verified) {
-        // Map distance < 0.6 to score > 60%
-        score = Math.max(score, Math.round(60 + (0.6 - distance) * 50))
+        // Map distance < 0.55 to score > 60%
+        score = Math.max(score, Math.round(60 + (0.55 - distance) * 80))
       } else {
         score = Math.min(score, 59)
       }
