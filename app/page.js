@@ -2480,14 +2480,14 @@ function App() {
             </div>
           ) : (
             <div className="space-y-4 mt-2">
-              <p className="text-sm text-slate-550 leading-relaxed font-semibold">We sent a 6-digit code to <strong className="text-slate-800">{phoneNumber}</strong>. Enter it below to verify.</p>
+              <p className="text-sm text-slate-550 leading-relaxed font-semibold">We sent a verification code to <strong className="text-slate-800">{phoneNumber}</strong>. Enter it below to verify.</p>
               <div className="space-y-1.5">
-                <Label htmlFor="otp-input" className="text-xs font-bold text-slate-700">6-Digit Code</Label>
+                <Label htmlFor="otp-input" className="text-xs font-bold text-slate-700">Verification Code</Label>
                 <Input
                   id="otp-input"
                   type="text"
                   maxLength={6}
-                  placeholder="000000"
+                  placeholder="0000"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                   className="bg-slate-50 border border-slate-200/80 focus-visible:ring-sky-500 text-center tracking-widest text-lg font-bold text-slate-800"
