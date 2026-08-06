@@ -2076,6 +2076,7 @@ function App() {
   const [authModal, setAuthModal] = useState({ open: false, tab: 'phone' })
   const [authStep, setAuthStep] = useState(1)
   const [phoneNumber, setPhoneNumber] = useState('')
+  const [rawPhone, setRawPhone] = useState('')
   const [otp, setOtp] = useState('')
   const [confirmationResult, setConfirmationResult] = useState(null)
   const [sendingOtp, setSendingOtp] = useState(false)
@@ -2121,6 +2122,8 @@ function App() {
           setLoading(false)
         }
       } else {
+        setPhoneNumber('')
+        setRawPhone('')
         setAuthModal({ open: true, tab: 'phone' })
         setAuthStep(1)
       }
@@ -2426,7 +2429,15 @@ function App() {
 
       {user && PREMIUM_ENABLED && <PremiumDialog open={showPremium} onOpenChange={setShowPremium} onUpgraded={handlePremiumUpgraded} />}
 
-      <Dialog open={authModal.open} onOpenChange={(o) => !o && setAuthModal({ open: false, tab: 'phone' })}>
+      <Dialog open={authModal.open} onOpenChange={(o) => {
+        if (!o) {
+          setAuthModal({ open: false, tab: 'phone' })
+          setAuthStep(1)
+          setPhoneNumber('')
+          setRawPhone('')
+          setOtp('')
+        }
+      }}>
         <DialogContent className="bg-white border-slate-200 max-w-sm rounded-2xl p-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-extrabold text-slate-800">Phone Authentication</DialogTitle>
@@ -2434,17 +2445,30 @@ function App() {
           
           {authStep === 1 ? (
             <div className="space-y-4 mt-2">
-              <p className="text-sm text-slate-550 leading-relaxed font-semibold">Enter your phone number (including country code, e.g. +91 9999999999) to receive a verification code.</p>
+              <p className="text-sm text-slate-550 leading-relaxed font-semibold">Enter your 10-digit mobile number to receive a verification code.</p>
               <div className="space-y-1.5">
                 <Label htmlFor="phone-input" className="text-xs font-bold text-slate-700">Phone Number</Label>
-                <Input
-                  id="phone-input"
-                  type="tel"
-                  placeholder="+91 XXXXXXXXXX"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="bg-slate-50 border border-slate-200/80 focus-visible:ring-sky-500 text-slate-800"
-                />
+                <div className="flex rounded-xl border border-slate-200/80 focus-within:ring-2 focus-within:ring-sky-500 overflow-hidden bg-slate-50">
+                  <span className="bg-slate-100 flex items-center justify-center px-3 text-sm font-bold text-slate-700 border-r border-slate-200/80 select-none">
+                    +91
+                  </span>
+                  <Input
+                    id="phone-input"
+                    type="tel"
+                    placeholder="XXXXXXXXXX"
+                    value={rawPhone}
+                    onChange={(e) => {
+                      let val = e.target.value.replace(/\D/g, '')
+                      if (val.startsWith('91') && val.length > 10) {
+                        val = val.slice(2)
+                      }
+                      val = val.slice(0, 10)
+                      setRawPhone(val)
+                      setPhoneNumber(val ? '+91' + val : '')
+                    }}
+                    className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-slate-800 flex-1 h-11 shadow-none"
+                  />
+                </div>
               </div>
               <Button
                 onClick={handleSendOtp}
