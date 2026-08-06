@@ -2146,7 +2146,7 @@ function App() {
   }
 
   const handleVerifyOtp = async () => {
-    if (!confirmationResult || otp.length !== 6) return
+    if (!confirmationResult || (otp.length !== 4 && otp.length !== 6)) return
     setVerifyingOtp(true)
     try {
       const data = await confirmFirebasePhoneOtp(confirmationResult, otp)
