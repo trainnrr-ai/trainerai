@@ -2438,7 +2438,7 @@ function App() {
           setOtp('')
         }
       }}>
-        <DialogContent className="bg-white border-slate-200 max-w-sm rounded-2xl p-6">
+        <DialogContent className="bg-white border-slate-200 max-w-sm rounded-2xl p-6 max-sm:top-[12%] max-sm:translate-y-0">
           <DialogHeader>
             <DialogTitle className="text-xl font-extrabold text-slate-800">Phone Authentication</DialogTitle>
           </DialogHeader>
