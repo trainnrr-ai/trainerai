@@ -57,7 +57,7 @@ const FIREBASE_AUTH_ENABLED = process.env.NEXT_PUBLIC_AUTH_PROVIDER === 'firebas
 const PLACEHOLDER_NAMES = ['Legacy User', 'Test User', 'Unknown User', '']
 const getProfileName = (p) => {
   const name = p?.name
-  if (!name || PLACEHOLDER_NAMES.includes(name)) return 'Trainr User'
+  if (!name || PLACEHOLDER_NAMES.includes(name) || name.startsWith('+') || /^\d+$/.test(name.replace(/[\s\-\+]/g, ''))) return 'Trainr User'
   return name
 }
 
@@ -143,8 +143,10 @@ function ProfileEditor({ user, profile, onSaved }) {
   const initialGoals = Array.isArray(profile?.goals) && profile.goals.length
     ? profile.goals
     : (profile?.goal ? [profile.goal] : [])
+  const initialName = profile?.name || user?.name || ''
+  const isPhone = initialName.startsWith('+') || /^\d+$/.test(initialName.replace(/[\s\-\+]/g, ''))
   const [form, setForm] = useState({
-    name: profile?.name || user?.name || '',
+    name: isPhone ? '' : initialName,
     age: profile?.age || '',
     gender: profile?.gender || '',
     city: profile?.city || '',
