@@ -2503,7 +2503,7 @@ function App() {
                 </Button>
                 <Button
                   onClick={handleVerifyOtp}
-                  disabled={verifyingOtp || otp.length !== 6}
+                  disabled={verifyingOtp || (otp.length !== 4 && otp.length !== 6)}
                   className="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl h-11 transition active:scale-[0.98]"
                 >
                   {verifyingOtp ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying…</> : 'Verify'}
