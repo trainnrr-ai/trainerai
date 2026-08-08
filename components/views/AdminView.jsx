@@ -263,8 +263,9 @@ function UsersTab({ refreshSig, onChanged }) {
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </div>
-          )
-        })}
+          </div>
+        )
+      })}
       </Card>
 
       <Dialog open={!!banDialog} onOpenChange={(o) => !o && setBanDialog(null)}>
