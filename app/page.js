@@ -2116,7 +2116,7 @@ function App() {
             localStorage.setItem('trainr_cached_profile', JSON.stringify(data.profile || null))
           } catch {}
           setView(data.profile ? 'discover' : 'profile-edit')
-          toast.success(`Welcome ${data.user.name?.split(' ')[0] || ''}!`)
+          toast.success('Welcome back!')
         } catch (err) {
           console.error('[Auth] Google Login Error:', err)
           toast.error(AUTH_ERROR_MESSAGE)
@@ -2167,7 +2167,7 @@ function App() {
       setAuthStep(1)
       setPhoneNumber('')
       setOtp('')
-      toast.success(`Welcome ${data.user.name?.split(' ')[0] || ''}!`)
+      toast.success('Welcome back!')
     } catch (e) {
       console.error('[Auth] Failed to verify OTP:', e)
       toast.error(OTP_VERIFY_ERROR_MESSAGE)
@@ -2208,7 +2208,7 @@ function App() {
             localStorage.setItem('trainr_cached_profile', JSON.stringify(data.profile || null))
           } catch {}
           setView(data.hasProfile ? 'discover' : 'profile-edit')
-          toast.success(`Welcome ${data.user.name?.split(' ')[0]}!`)
+          toast.success('Welcome back!')
           try {
             const meRes = await fetch('/api/auth/me', { credentials: 'include' })
             const me = await meRes.json()

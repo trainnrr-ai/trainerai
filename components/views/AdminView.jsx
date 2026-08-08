@@ -220,14 +220,17 @@ function UsersTab({ refreshSig, onChanged }) {
             <Avatar className="w-9 h-9"><AvatarImage src={u.picture} /><AvatarFallback>{u.name?.slice(0, 1)}</AvatarFallback></Avatar>
             <div className="flex-1 min-w-0">
               <div className="font-bold text-slate-800 truncate flex items-center gap-2">
-                {u.name || 'Unknown'}
+                {u.profileName || u.name || 'Unknown'}
                 {u.verified && <BadgeCheck className="w-4 h-4 text-sky-500 fill-sky-500/10" />}
                 {u.tier === 'pro' && <Badge className="bg-amber-50 text-amber-600 border border-amber-200 text-[10px] font-bold">PRO</Badge>}
                 {u.hasProfile === false && (
                   <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 text-[10px] font-medium">No profile</Badge>
                 )}
               </div>
-              <div className="text-xs text-slate-500 truncate mt-0.5">{u.email}</div>
+              <div className="text-xs text-slate-500 mt-0.5 space-y-0.5 font-medium">
+                {u.email && <div className="truncate">📧 {u.email}</div>}
+                {u.phoneNumber && <div className="truncate">📞 {u.phoneNumber}</div>}
+              </div>
               <div className="text-[10px] text-slate-400 mt-0.5">Joined {timeAgo(u.createdAt)}</div>
             </div>
             
