@@ -215,10 +215,19 @@ function UsersTab({ refreshSig, onChanged }) {
             {total > users.length && <span className="text-amber-600 font-semibold">Narrow with search to see more</span>}
           </div>
         )}
-        {users.map(u => (
-          <div key={u.id} className="p-4 flex items-center gap-3 text-sm">
-            <Avatar className="w-9 h-9"><AvatarImage src={u.picture} /><AvatarFallback>{u.name?.slice(0, 1)}</AvatarFallback></Avatar>
-            <div className="flex-1 min-w-0">
+        {users.map(u => {
+          const displayName = u.profileName || u.name || 'Unknown'
+          const cleanName = displayName.replace(/[\s\-\+]/g, '')
+          const fallbackChar = /^\d+$/.test(cleanName)
+            ? (cleanName.slice(0, 1) || 'U')
+            : (displayName.slice(0, 1).toUpperCase() || 'U')
+          return (
+            <div key={u.id} className="p-4 flex items-center gap-3 text-sm">
+              <Avatar className="w-9 h-9">
+                <AvatarImage src={u.profilePicture || u.picture} />
+                <AvatarFallback>{fallbackChar}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
               <div className="font-bold text-slate-800 truncate flex items-center gap-2">
                 {u.profileName || u.name || 'Unknown'}
                 {u.verified && <BadgeCheck className="w-4 h-4 text-sky-500 fill-sky-500/10" />}
@@ -254,8 +263,8 @@ function UsersTab({ refreshSig, onChanged }) {
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </Card>
 
       <Dialog open={!!banDialog} onOpenChange={(o) => !o && setBanDialog(null)}>
