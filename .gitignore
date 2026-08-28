@@ -91,3 +91,4 @@ node_modules/next/next-swc-fallback/@next/swc-darwin-arm64/next-swc.darwin-arm64
 # Environment variables
 .env
 .env*.local
+node_modules/@next/swc-darwin-arm64/next-swc.darwin-arm64.node

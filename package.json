@@ -48,6 +48,7 @@
         "face-api.js": "^0.22.2",
         "firebase": "^10.14.1",
         "firebase-admin": "^12.7.0",
+        "framer-motion": "^13.1.0",
         "input-otp": "^1.4.2",
         "lucide-react": "^0.516.0",
         "mongodb": "^6.6.0",

@@ -26,7 +26,7 @@ import {
 // Shared constants & utilities
 import { LOGO, INSTAGRAM_URL, GOALS, TIMINGS, LEVELS, GENDERS, CITIES } from '@/lib/client/constants'
 import { loginWithGoogle, compressImage, formatLastActive } from '@/lib/client/utils'
-import { loginWithFirebaseGoogle, sendFirebasePhoneOtp, confirmFirebasePhoneOtp } from '@/lib/client/firebaseAuth'
+import { loginWithFirebaseGoogle, sendFirebasePhoneOtp, confirmFirebasePhoneOtp, loginWithFirebaseEmail, signupWithFirebaseEmail } from '@/lib/client/firebaseAuth'
 
 // Reusable components
 import SmartImg from '@/components/app/SmartImg'
@@ -42,6 +42,7 @@ const Landing = dynamic(() => import('@/components/views/Landing'), {
     </div>
   )
 })
+const AuthDialog = dynamic(() => import('@/components/views/AuthDialog'), { ssr: false })
 const AboutView = dynamic(() => import('@/components/views/AboutView'), { ssr: false })
 const PrivacyView = dynamic(() => import('@/components/views/PrivacyView'), { ssr: false })
 const ContactView = dynamic(() => import('@/components/views/ContactView'), { ssr: false })
@@ -140,11 +141,14 @@ function ProfileEditor({ user, profile, onSaved }) {
   const isEditMode = !!profile
   const totalSteps = 7
   const [step, setStep] = useState(0)
+  const [direction, setDirection] = useState(1) // 1 = forward, -1 = backward
+
   const initialGoals = Array.isArray(profile?.goals) && profile.goals.length
     ? profile.goals
     : (profile?.goal ? [profile.goal] : [])
   const initialName = profile?.name || user?.name || ''
   const isPhone = initialName.startsWith('+') || /^\d+$/.test(initialName.replace(/[\s\-\+]/g, ''))
+
   const [form, setForm] = useState({
     name: isPhone ? '' : initialName,
     age: profile?.age || '',
@@ -160,17 +164,37 @@ function ProfileEditor({ user, profile, onSaved }) {
     instagram: profile?.instagram || '',
     photos: profile?.photos || (user?.picture ? [user.picture] : []),
   })
+
   const [photoUrl, setPhotoUrl] = useState('')
   const [saving, setSaving] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
+
+  // Floating label active states
+  const [focusedField, setFocusedField] = useState('')
+  const [shakeFields, setShakeFields] = useState({})
+
+  // City search combobox state
+  const [citySearch, setCitySearch] = useState('')
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false)
 
   const update = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const triggerShake = (fieldName) => {
+    setShakeFields(prev => ({ ...prev, [fieldName]: true }))
+    setTimeout(() => {
+      setShakeFields(prev => ({ ...prev, [fieldName]: false }))
+    }, 400)
+  }
+
   const addPhoto = () => {
     if (!photoUrl.trim()) return
     if (form.photos.length >= 5) { toast.error('Maximum 5 photos'); return }
     update('photos', [...form.photos, photoUrl.trim()])
     setPhotoUrl('')
   }
+
   const removePhoto = (i) => update('photos', form.photos.filter((_, idx) => idx !== i))
+
   const handleFile = (e) => {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
@@ -178,6 +202,7 @@ function ProfileEditor({ user, profile, onSaved }) {
     if (remaining <= 0) { toast.error('Maximum 5 photos'); e.target.value = ''; return }
     const toProcess = files.slice(0, remaining)
     if (files.length > remaining) toast(`Only ${remaining} more photo${remaining > 1 ? 's' : ''} can be added`)
+    
     let currentPhotos = [...form.photos]
     Promise.all(
       toProcess.map(file =>
@@ -190,90 +215,135 @@ function ProfileEditor({ user, profile, onSaved }) {
     e.target.value = ''
   }
 
-  const validateStep = () => {
+  const canContinue = () => {
     switch (step) {
-      case 0: if (form.photos.length < 3) return 'Add at least 3 photos'; break
-      case 1: if (!form.name || !form.age || !form.gender) return 'Fill name, age and gender'; break
-      case 2: if (!form.city || !form.gymName) return 'Pick city and your gym'; break
-      case 3: if (!form.goals || form.goals.length === 0) return 'Pick at least 1 goal (max 3)'; break
-      case 4: if (!form.timing) return 'Pick your workout timing'; break
-      case 5: if (!form.level) return 'Pick your experience level'; break
-      default: break
+      case 0: return form.photos.length >= 1
+      case 1: return !!form.name && !!form.age && !!form.gender
+      case 2: return !!form.city && !!form.gymName
+      case 3: return form.goals && form.goals.length >= 1
+      case 4: return !!form.timing
+      case 5: return !!form.level
+      case 6: return true
     }
-    return null
+    return true
   }
 
   const next = () => {
-    const err = validateStep()
-    if (err) { toast.error(err); return }
-    if (step < totalSteps - 1) setStep(s => s + 1)
-    else submit()
+    if (!canContinue()) {
+      if (step === 0) triggerShake('photos')
+      if (step === 1) {
+        if (!form.name) triggerShake('name')
+        if (!form.age) triggerShake('age')
+        if (!form.gender) triggerShake('gender')
+      }
+      if (step === 2) {
+        if (!form.city) triggerShake('city')
+        if (!form.gymName) triggerShake('gymName')
+      }
+      if (step === 3) triggerShake('goals')
+      if (step === 4) triggerShake('timing')
+      if (step === 5) triggerShake('level')
+      return
+    }
+    if (step < totalSteps - 1) {
+      setDirection(1)
+      setStep(s => s + 1)
+    } else {
+      submit()
+    }
   }
-  const back = () => { if (step > 0) setStep(s => s - 1) }
+
+  const back = () => {
+    if (step > 0) {
+      setDirection(-1)
+      setStep(s => s - 1)
+    }
+  }
 
   const submit = async () => {
     setSaving(true)
     try {
-      const res = await fetch('/api/profile', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
-      toast.success(isEditMode ? 'Profile updated!' : 'Welcome to Trainr!')
-      onSaved?.(data.profile)
-    } catch (e) { toast.error(e.message) } finally { setSaving(false) }
+      
+      // Play celebratory checkmark burst
+      setShowCelebration(true)
+      setTimeout(() => {
+        toast.success(isEditMode ? 'Profile updated!' : 'Welcome to Trainr!')
+        onSaved?.(data.profile)
+      }, 1600)
+    } catch (e) {
+      toast.error(e.message)
+      setSaving(false)
+    }
   }
 
   if (isEditMode) {
     return (
       <div className="pt-20 pb-24 max-w-3xl mx-auto px-4 md:px-6">
         <div className="mb-8 fade-up">
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">Edit Profile</h1>
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">Edit Profile</h1>
           <p className="text-slate-500 mt-2">Update your details. Changes are visible to new partners immediately.</p>
         </div>
         <div className="space-y-6 fade-up" style={{ animationDelay: '0.1s' }}>
           <PhotoEditorCard photos={form.photos} setPhotos={(p) => update('photos', p)} photoUrl={photoUrl} setPhotoUrl={setPhotoUrl} addPhoto={addPhoto} handleFile={handleFile} removePhoto={removePhoto} />
 
-          <Card className="bg-white border-slate-200/85 shadow-sm p-6 space-y-4 rounded-2xl">
+          <Card className="bg-white border border-slate-200 shadow-sm p-6 space-y-4 rounded-2xl">
             <h3 className="font-bold text-slate-800 text-lg">Basics</h3>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Name"><Input value={form.name} onChange={e => update('name', e.target.value)} className="bg-white border-slate-200 focus-visible:ring-sky-500" /></Field>
-              <Field label="Age"><Input type="number" min={18} max={80} value={form.age} onChange={e => update('age', e.target.value)} className="bg-white border-slate-200 focus-visible:ring-sky-500" /></Field>
+              <Field label="Name"><Input value={form.name} onChange={e => update('name', e.target.value)} className="bg-white border-slate-200 focus-visible:ring-sky-500 font-semibold text-slate-800 h-11" /></Field>
+              <Field label="Age"><Input type="number" min={18} max={80} value={form.age} onChange={e => update('age', e.target.value)} className="bg-white border-slate-200 focus-visible:ring-sky-500 font-semibold text-slate-800 h-11" /></Field>
               <Field label="Gender">
-                <Select value={form.gender} onValueChange={v => update('gender', v)}><SelectTrigger className="bg-white border-slate-200"><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select>
+                <Select value={form.gender} onValueChange={v => update('gender', v)}>
+                  <SelectTrigger className="bg-white border-slate-200 font-semibold text-slate-800 h-11"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+                </Select>
               </Field>
               <Field label="City">
-                <Select value={form.city} onValueChange={v => update('city', v)}><SelectTrigger className="bg-white border-slate-200"><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+                <Select value={form.city} onValueChange={v => update('city', v)}>
+                  <SelectTrigger className="bg-white border-slate-200 font-semibold text-slate-800 h-11"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                </Select>
               </Field>
-              <Field label="Height (cm)"><Input type="number" value={form.height} onChange={e => update('height', e.target.value)} className="bg-white border-slate-200 focus-visible:ring-sky-500" /></Field>
-              <Field label="Weight (kg)"><Input type="number" value={form.weight} onChange={e => update('weight', e.target.value)} className="bg-white border-slate-200 focus-visible:ring-sky-500" /></Field>
+              <Field label="Height (cm)"><Input type="number" value={form.height} onChange={e => update('height', e.target.value)} className="bg-white border-slate-200 focus-visible:ring-sky-500 font-semibold text-slate-800 h-11" /></Field>
+              <Field label="Weight (kg)"><Input type="number" value={form.weight} onChange={e => update('weight', e.target.value)} className="bg-white border-slate-200 focus-visible:ring-sky-500 font-semibold text-slate-800 h-11" /></Field>
             </div>
           </Card>
 
-          <Card className="bg-white border-slate-200/85 shadow-sm p-6 space-y-4 rounded-2xl">
+          <Card className="bg-white border border-slate-200 shadow-sm p-6 space-y-4 rounded-2xl">
             <h3 className="font-bold text-slate-800 text-lg">Fitness</h3>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Gym Name"><Input value={form.gymName} onChange={e => update('gymName', e.target.value)} className="bg-white border-slate-200 focus-visible:ring-sky-500" /></Field>
+              <Field label="Gym Name"><Input value={form.gymName} onChange={e => update('gymName', e.target.value)} className="bg-white border-slate-200 focus-visible:ring-sky-500 font-semibold text-slate-800 h-11" /></Field>
               <Field label="Experience Level">
-                <Select value={form.level} onValueChange={v => update('level', v)}><SelectTrigger className="bg-white border-slate-200"><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{LEVELS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent></Select>
+                <Select value={form.level} onValueChange={v => update('level', v)}>
+                  <SelectTrigger className="bg-white border-slate-200 font-semibold text-slate-800 h-11"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{LEVELS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+                </Select>
               </Field>
               <Field label="Workout Goals (max 3)">
                 <GoalsMultiSelect value={form.goals} onChange={(g) => update('goals', g)} />
               </Field>
               <Field label="Workout Timing">
-                <Select value={form.timing} onValueChange={v => update('timing', v)}><SelectTrigger className="bg-white border-slate-200"><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>{TIMINGS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select>
+                <Select value={form.timing} onValueChange={v => update('timing', v)}>
+                  <SelectTrigger className="bg-white border-slate-200 font-semibold text-slate-800 h-11"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{TIMINGS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
               </Field>
             </div>
             <Field label="Short Bio">
-              <Textarea value={form.bio} onChange={e => update('bio', e.target.value)} maxLength={200} className="bg-white border-slate-200 focus-visible:ring-sky-500 min-h-[90px]" />
-              <div className="text-xs text-slate-400 mt-1 text-right">{form.bio.length}/200</div>
+              <Textarea value={form.bio} onChange={e => update('bio', e.target.value)} maxLength={300} className="bg-white border-slate-200 focus-visible:ring-sky-500 min-h-[90px] font-semibold text-slate-800" />
+              <div className="text-xs text-slate-400 mt-1 text-right">{form.bio.length}/300</div>
             </Field>
             <Field label="Instagram (optional)">
               <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3">
                 <Instagram className="w-4 h-4 text-slate-400" />
-                <Input value={form.instagram} onChange={e => update('instagram', e.target.value.replace('@',''))} placeholder="username" className="bg-transparent border-0 px-0 focus-visible:ring-0" />
+                <Input value={form.instagram} onChange={e => update('instagram', e.target.value.replace('@',''))} placeholder="username" className="bg-transparent border-0 px-0 focus-visible:ring-0 font-semibold text-slate-800" />
               </div>
             </Field>
           </Card>
@@ -288,106 +358,460 @@ function ProfileEditor({ user, profile, onSaved }) {
   }
 
   const stepHeader = [
-    { kicker: 'Step 1 of 7', title: 'Add your photos', sub: 'Real, recent photos build trust faster. Add 3 to 5.' },
+    { kicker: 'Step 1 of 7', title: 'Add your photos', sub: 'Upload your real photos so your gym partner can recognize you. (Min 1, Max 5)' },
     { kicker: 'Step 2 of 7', title: 'A bit about you', sub: 'Just the basics — name, age, gender.' },
-    { kicker: 'Step 3 of 7', title: 'Where do you train?', sub: 'Pick your city and your home gym.' },
-    { kicker: 'Step 4 of 7', title: "Pick your goals", sub: 'Choose up to 3. We\u2019ll match you with partners chasing the same.' },
+    { kicker: 'Step 3 of 7', title: 'Where do you train?', sub: 'Choose your city and your home gym branch name.' },
+    { kicker: 'Step 4 of 7', title: "Choose your goals", sub: 'Select up to 3 goals. We match you with partners chasing the same.' },
     { kicker: 'Step 5 of 7', title: 'When do you train?', sub: 'Schedule matters. Pick your usual session window.' },
-    { kicker: 'Step 6 of 7', title: 'Experience level', sub: 'So we set realistic expectations between partners.' },
-    { kicker: 'Step 7 of 7', title: 'Tell partners your story', sub: 'Short, real, and what you\u2019re looking for.' },
+    { kicker: 'Step 6 of 7', title: 'Your experience level', sub: 'So we set realistic workout expectations between partners.' },
+    { kicker: 'Step 7 of 7', title: 'Tell partners your story', sub: 'Keep it short and real. Mention what workouts you enjoy. (Max 300)' },
   ]
   const cur = stepHeader[step]
   const progressPct = ((step + 1) / totalSteps) * 100
+
+  // Floating label float variants
+  const labelVariants = {
+    idle: { y: 12, scale: 1, color: '#64748B' },
+    active: { y: -2, scale: 0.82, color: '#0EA5E9' }
+  }
+
+  const shakeVariants = {
+    shake: {
+      x: [-6, 6, -4, 4, -2, 2, 0],
+      transition: { duration: 0.35 }
+    }
+  }
+
+  const stepVariants = {
+    enter: (dir) => ({
+      x: dir > 0 ? 32 : -32,
+      opacity: 0
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      transition: { duration: 0.28, ease: 'easeOut' }
+    },
+    exit: (dir) => ({
+      x: dir > 0 ? -32 : 32,
+      opacity: 0,
+      transition: { duration: 0.22, ease: 'easeIn' }
+    })
+  }
+
   return (
-    <div className="pt-20 pb-24 min-h-screen">
+    <div className="pt-20 pb-24 min-h-screen relative overflow-hidden bg-slate-50/50">
+      
+      {/* Celebration overlay */}
+      <AnimatePresence>
+        {showCelebration && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: [0.5, 1.15, 1], opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className="w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 mb-6"
+            >
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <motion.path
+                  d="M20 6L9 17l-5-5"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ delay: 0.2, duration: 0.4 }}
+                />
+              </svg>
+            </motion.div>
+            <motion.h2
+              initial={{ y: 8, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-2xl font-black text-slate-800"
+            >
+              Profile Completed!
+            </motion.h2>
+            <motion.p
+              initial={{ y: 8, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="text-slate-500 text-sm mt-1.5 font-semibold"
+            >
+              Redirecting you to discover nearby partners...
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-xl mx-auto px-4 md:px-6">
+        
+        {/* Stepper Shell Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-            <span className="uppercase tracking-wider font-bold text-sky-600">{cur.kicker}</span>
-            <span className="font-medium">{Math.round(progressPct)}% complete</span>
+            <span className="uppercase tracking-wider font-extrabold text-sky-600">{cur.kicker}</span>
+            <span className="font-bold text-slate-600">{Math.round(progressPct)}% complete</span>
           </div>
           <div className="h-1.5 rounded-full bg-slate-200/70 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] transition-all duration-500 ease-out" style={{ width: `${progressPct}%` }} />
+            <motion.div
+              layoutId="stepper-progress-bar"
+              className="h-full bg-sky-500"
+              animate={{ width: `${progressPct}%` }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            />
           </div>
         </div>
 
-        <div key={step} className="fade-up">
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-800">{cur.title}</h1>
-          <p className="text-slate-500 mt-2">{cur.sub}</p>
+        {/* Dynamic step view */}
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={step}
+            custom={direction}
+            variants={stepVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+          >
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">{cur.title}</h1>
+            <p className="text-slate-500 mt-2 font-semibold text-sm">{cur.sub}</p>
 
-          <div className="mt-8 space-y-4">
-            {step === 0 && (
-              <PhotoEditorCard photos={form.photos} setPhotos={(p) => update('photos', p)} photoUrl={photoUrl} setPhotoUrl={setPhotoUrl} addPhoto={addPhoto} handleFile={handleFile} removePhoto={removePhoto} />
-            )}
-            {step === 1 && (
-              <Card className="bg-white border-slate-200 shadow-md p-6 space-y-4 rounded-2xl">
-                <Field label="Name"><Input value={form.name} onChange={e => update('name', e.target.value)} className="bg-white border-slate-200 h-11 focus-visible:ring-sky-500" placeholder="Your name" /></Field>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Age"><Input type="number" min={18} max={80} value={form.age} onChange={e => update('age', e.target.value)} className="bg-white border-slate-200 h-11 focus-visible:ring-sky-500" placeholder="25" /></Field>
-                  <Field label="Gender">
-                    <Select value={form.gender} onValueChange={v => update('gender', v)}><SelectTrigger className="bg-white border-slate-200 h-11"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select>
-                  </Field>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Height (cm) — optional"><Input type="number" value={form.height} onChange={e => update('height', e.target.value)} className="bg-white border-slate-200 h-11 focus-visible:ring-sky-500" /></Field>
-                  <Field label="Weight (kg) — optional"><Input type="number" value={form.weight} onChange={e => update('weight', e.target.value)} className="bg-white border-slate-200 h-11 focus-visible:ring-sky-500" /></Field>
-                </div>
-              </Card>
-            )}
-            {step === 2 && (
-              <Card className="bg-white border-slate-200 shadow-md p-6 space-y-4 rounded-2xl">
-                <Field label="City">
-                  <Select value={form.city} onValueChange={v => update('city', v)}><SelectTrigger className="bg-white border-slate-200 h-11"><SelectValue placeholder="Select your city" /></SelectTrigger>
-                    <SelectContent>{CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
-                </Field>
-                <Field label="Gym name"><Input value={form.gymName} onChange={e => update('gymName', e.target.value)} placeholder="e.g. Cult Fit, Gold's Gym" className="bg-white border-slate-200 h-11 focus-visible:ring-sky-500" /></Field>
-              </Card>
-            )}
-            {step === 3 && (
-              <Card className="bg-white border-slate-200 shadow-md p-5 md:p-6 rounded-2xl">
-                <div className="mb-3 text-sm text-slate-600 font-medium">Pick the goals you train for. <span className="text-slate-400">Max 3.</span></div>
-                <GoalsMultiSelect value={form.goals} onChange={(g) => update('goals', g)} />
-              </Card>
-            )}
-            {step === 4 && (
-              <ChoiceGrid options={TIMINGS} value={form.timing} onChange={(v) => update('timing', v)} icon={Clock} />
-            )}
-            {step === 5 && (
-              <ChoiceGrid options={LEVELS} value={form.level} onChange={(v) => update('level', v)} icon={Zap} large />
-            )}
-            {step === 6 && (
-              <Card className="bg-white border-slate-200 shadow-md p-6 space-y-4 rounded-2xl">
-                <Field label="Short bio">
-                  <Textarea
-                    value={form.bio} onChange={e => update('bio', e.target.value)} maxLength={200}
-                    placeholder="Morning workouts before office. Need a squat partner."
-                    className="bg-white border-slate-200 min-h-[110px] focus-visible:ring-sky-500"
-                  />
-                  <div className="text-xs text-slate-400 mt-1 text-right">{form.bio.length}/200</div>
-                </Field>
-                <Field label="Instagram (optional — gets you a verified badge)">
-                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 h-11">
-                    <Instagram className="w-4 h-4 text-slate-450" />
-                    <Input value={form.instagram} onChange={e => update('instagram', e.target.value.replace('@',''))} placeholder="username" className="bg-transparent border-0 px-0 focus-visible:ring-0" />
+            <div className="mt-8 space-y-4">
+              {step === 0 && (
+                <motion.div
+                  variants={shakeVariants}
+                  animate={shakeFields['photos'] ? 'shake' : 'idle'}
+                >
+                  <PhotoEditorCard photos={form.photos} setPhotos={(p) => update('photos', p)} photoUrl={photoUrl} setPhotoUrl={setPhotoUrl} addPhoto={addPhoto} handleFile={handleFile} removePhoto={removePhoto} />
+                </motion.div>
+              )}
+
+              {step === 1 && (
+                <Card className="bg-white border border-slate-200 shadow-md p-6 space-y-5 rounded-2xl">
+                  {/* Name field */}
+                  <motion.div
+                    variants={shakeVariants}
+                    animate={shakeFields['name'] ? 'shake' : 'idle'}
+                    className="relative rounded-xl border border-slate-200/80 bg-slate-50/60 p-1.5 focus-within:ring-2 focus-within:ring-sky-500"
+                  >
+                    <motion.label
+                      variants={labelVariants}
+                      animate={focusedField === 'name' || form.name ? 'active' : 'idle'}
+                      transition={{ duration: 0.15 }}
+                      className="absolute left-4 font-bold text-xs pointer-events-none"
+                    >
+                      Your Full Name
+                    </motion.label>
+                    <Input
+                      type="text"
+                      value={form.name}
+                      onFocus={() => setFocusedField('name')}
+                      onBlur={() => setFocusedField('')}
+                      onChange={e => update('name', e.target.value)}
+                      className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-slate-800 text-sm font-semibold h-9 shadow-none pt-4"
+                    />
+                  </motion.div>
+
+                  {/* Age and Gender fields */}
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <motion.div
+                      variants={shakeVariants}
+                      animate={shakeFields['age'] ? 'shake' : 'idle'}
+                      className="relative rounded-xl border border-slate-200/80 bg-slate-50/60 p-1.5 focus-within:ring-2 focus-within:ring-sky-500"
+                    >
+                      <motion.label
+                        variants={labelVariants}
+                        animate={focusedField === 'age' || form.age ? 'active' : 'idle'}
+                        transition={{ duration: 0.15 }}
+                        className="absolute left-4 font-bold text-xs pointer-events-none"
+                      >
+                        Age
+                      </motion.label>
+                      <Input
+                        type="number"
+                        min={18}
+                        max={80}
+                        value={form.age}
+                        onFocus={() => setFocusedField('age')}
+                        onBlur={() => setFocusedField('')}
+                        onChange={e => update('age', e.target.value)}
+                        className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-slate-800 text-sm font-semibold h-9 shadow-none pt-4"
+                      />
+                    </motion.div>
+
+                    <motion.div
+                      variants={shakeVariants}
+                      animate={shakeFields['gender'] ? 'shake' : 'idle'}
+                      className="flex flex-col justify-center"
+                    >
+                      <Select value={form.gender} onValueChange={v => update('gender', v)}>
+                        <SelectTrigger className="bg-slate-50/60 border border-slate-200/80 h-[52px] rounded-xl font-bold text-slate-800 text-xs px-3 focus:ring-2 focus:ring-sky-500">
+                          <SelectValue placeholder="Gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GENDERS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </motion.div>
                   </div>
-                </Field>
-                <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 text-sm text-emerald-800 leading-relaxed font-medium">
-                  By continuing you agree to Trainr’s safety-first community guidelines: zero tolerance for harassment, sexual content or fake profiles.
-                </div>
-              </Card>
-            )}
-          </div>
-        </div>
 
+                  {/* Height & Weight Optionals */}
+                  <div className="grid grid-cols-2 gap-3.5 pt-1">
+                    <div className="relative rounded-xl border border-slate-200/80 bg-slate-50/60 p-1.5 focus-within:ring-2 focus-within:ring-sky-500">
+                      <motion.label
+                        variants={labelVariants}
+                        animate={focusedField === 'height' || form.height ? 'active' : 'idle'}
+                        transition={{ duration: 0.15 }}
+                        className="absolute left-4 font-bold text-xs pointer-events-none"
+                      >
+                        Height (cm) — Optional
+                      </motion.label>
+                      <Input
+                        type="number"
+                        value={form.height}
+                        onFocus={() => setFocusedField('height')}
+                        onBlur={() => setFocusedField('')}
+                        onChange={e => update('height', e.target.value)}
+                        className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-slate-800 text-sm font-semibold h-9 shadow-none pt-4"
+                      />
+                    </div>
+
+                    <div className="relative rounded-xl border border-slate-200/80 bg-slate-50/60 p-1.5 focus-within:ring-2 focus-within:ring-sky-500">
+                      <motion.label
+                        variants={labelVariants}
+                        animate={focusedField === 'weight' || form.weight ? 'active' : 'idle'}
+                        transition={{ duration: 0.15 }}
+                        className="absolute left-4 font-bold text-xs pointer-events-none"
+                      >
+                        Weight (kg) — Optional
+                      </motion.label>
+                      <Input
+                        type="number"
+                        value={form.weight}
+                        onFocus={() => setFocusedField('weight')}
+                        onBlur={() => setFocusedField('')}
+                        onChange={e => update('weight', e.target.value)}
+                        className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-slate-800 text-sm font-semibold h-9 shadow-none pt-4"
+                      />
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {step === 2 && (
+                <Card className="bg-white border border-slate-200 shadow-md p-6 space-y-5 rounded-2xl overflow-visible">
+                  {/* City searchable dropdown */}
+                  <motion.div
+                    variants={shakeVariants}
+                    animate={shakeFields['city'] ? 'shake' : 'idle'}
+                    className="relative"
+                  >
+                    <Label className="text-xs font-bold text-slate-700 mb-1.5 block">Select City</Label>
+                    <div className="relative">
+                      <div className="flex rounded-xl border border-slate-200/80 focus-within:ring-2 focus-within:ring-sky-500 overflow-hidden bg-slate-50">
+                        <Input
+                          type="text"
+                          placeholder={form.city || "Search city..."}
+                          value={citySearch}
+                          onChange={(e) => {
+                            setCitySearch(e.target.value)
+                            setCityDropdownOpen(true)
+                          }}
+                          onFocus={() => setCityDropdownOpen(true)}
+                          className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-slate-800 text-sm font-semibold flex-1 h-11 shadow-none"
+                        />
+                      </div>
+                      
+                      <AnimatePresence>
+                        {cityDropdownOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 6 }}
+                            className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-[180px] overflow-y-auto divide-y divide-slate-50"
+                          >
+                            {CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase()))
+                              .slice(0, 8)
+                              .map((c, idx) => (
+                                <motion.button
+                                  key={c}
+                                  initial={{ opacity: 0, x: -4 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: idx * 0.025 }}
+                                  onClick={() => {
+                                    update('city', c)
+                                    setCitySearch('')
+                                    setCityDropdownOpen(false)
+                                  }}
+                                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-sky-500 transition"
+                                >
+                                  {c}
+                                </motion.button>
+                              ))}
+                            {CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase())).length === 0 && (
+                              <div className="p-3 text-center text-xs font-medium text-slate-400">No match found</div>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+
+                  {/* Gym name field */}
+                  <motion.div
+                    variants={shakeVariants}
+                    animate={shakeFields['gymName'] ? 'shake' : 'idle'}
+                    className="relative rounded-xl border border-slate-200/80 bg-slate-50/60 p-1.5 focus-within:ring-2 focus-within:ring-sky-500"
+                  >
+                    <motion.label
+                      variants={labelVariants}
+                      animate={focusedField === 'gymName' || form.gymName ? 'active' : 'idle'}
+                      transition={{ duration: 0.15 }}
+                      className="absolute left-4 font-bold text-xs pointer-events-none"
+                    >
+                      Home Gym Branch Name
+                    </motion.label>
+                    <Input
+                      type="text"
+                      value={form.gymName}
+                      onFocus={() => setFocusedField('gymName')}
+                      onBlur={() => setFocusedField('')}
+                      onChange={e => update('gymName', e.target.value)}
+                      placeholder={focusedField === 'gymName' ? "e.g. Cult Fit, Gold's Gym" : ''}
+                      className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-slate-800 text-sm font-semibold h-9 shadow-none pt-4"
+                    />
+                  </motion.div>
+
+                  {cityDropdownOpen && (
+                    <div className="fixed inset-0 z-20 cursor-default" onClick={() => setCityDropdownOpen(false)} />
+                  )}
+                </Card>
+              )}
+
+              {step === 3 && (
+                <motion.div
+                  variants={shakeVariants}
+                  animate={shakeFields['goals'] ? 'shake' : 'idle'}
+                >
+                  <Card className="bg-white border border-slate-200 shadow-md p-5 md:p-6 rounded-2xl">
+                    <div className="mb-3 text-xs text-slate-550 font-bold">Pick the goals you train for. <span className="text-slate-400">Max 3.</span></div>
+                    <GoalsMultiSelect value={form.goals} onChange={(g) => update('goals', g)} />
+                  </Card>
+                </motion.div>
+              )}
+
+              {step === 4 && (
+                <motion.div
+                  variants={shakeVariants}
+                  animate={shakeFields['timing'] ? 'shake' : 'idle'}
+                >
+                  <ChoiceGrid options={TIMINGS} value={form.timing} onChange={(v) => update('timing', v)} icon={Clock} />
+                </motion.div>
+              )}
+
+              {step === 5 && (
+                <motion.div
+                  variants={shakeVariants}
+                  animate={shakeFields['level'] ? 'shake' : 'idle'}
+                >
+                  <ChoiceGrid options={LEVELS} value={form.level} onChange={(v) => update('level', v)} icon={Zap} large />
+                </motion.div>
+              )}
+
+              {step === 6 && (
+                <Card className="bg-white border border-slate-200 shadow-md p-6 space-y-5 rounded-2xl">
+                  {/* Bio / Story */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">Tell partners your story</Label>
+                    <Textarea
+                      value={form.bio}
+                      onChange={e => update('bio', e.target.value)}
+                      maxLength={300}
+                      placeholder="e.g. Morning workouts before office. Need a squat partner who keeps me accountable."
+                      className="bg-slate-50 border border-slate-200/80 min-h-[110px] rounded-xl text-slate-800 text-sm font-semibold focus-visible:ring-sky-500"
+                    />
+                    
+                    {/* Live digit cross-fade character counter */}
+                    <div className="flex justify-end pr-1">
+                      <div className={`text-[10px] font-bold flex items-center gap-0.5 ${
+                        form.bio.length >= 260 ? 'text-red-500' : 'text-slate-400'
+                      }`}>
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={form.bio.length}
+                            initial={{ opacity: 0, y: -2 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 2 }}
+                            transition={{ duration: 0.1 }}
+                          >
+                            {form.bio.length}
+                          </motion.span>
+                        </AnimatePresence>
+                        <span>/ 300</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Instagram Username */}
+                  <div className="relative rounded-xl border border-slate-200/80 bg-slate-50/60 p-1.5 focus-within:ring-2 focus-within:ring-sky-500">
+                    <motion.label
+                      variants={labelVariants}
+                      animate={focusedField === 'instagram' || form.instagram ? 'active' : 'idle'}
+                      transition={{ duration: 0.15 }}
+                      className="absolute left-9 font-bold text-xs pointer-events-none"
+                    >
+                      Instagram (Optional — gets verification badge)
+                    </motion.label>
+                    <div className="flex items-center gap-2 px-1">
+                      <Instagram className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <Input
+                        type="text"
+                        value={form.instagram}
+                        onFocus={() => setFocusedField('instagram')}
+                        onBlur={() => setFocusedField('')}
+                        onChange={e => update('instagram', e.target.value.replace('@',''))}
+                        className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-slate-800 text-sm font-semibold h-9 shadow-none pt-4"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-xs text-emerald-800 leading-relaxed font-bold">
+                    By completing you agree to Trainr’s safety-first community guidelines: zero tolerance for fake profiles, creep behavior or harassment.
+                  </div>
+                </Card>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Nav control buttons */}
         <div className="mt-8 flex items-center gap-3">
           {step > 0 && (
-            <Button onClick={back} variant="outline" className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 rounded-full h-12 px-5 transition">
+            <Button
+              onClick={back}
+              variant="outline"
+              className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl h-11 px-5 transition active:scale-[0.98] font-bold text-xs shadow-sm"
+            >
               <ChevronLeft className="w-4 h-4 mr-1" /> Back
             </Button>
           )}
-          <Button onClick={next} disabled={saving} className="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-full h-12 active:scale-[0.99] transition shadow-sm">
-            {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating profile…</> : (step === totalSteps - 1 ? <>Finish & Discover Partners <ArrowRight className="w-4 h-4 ml-2" /></> : <>Continue <ArrowRight className="w-4 h-4 ml-2" /></>)}
+          <Button
+            onClick={next}
+            disabled={saving || !canContinue()}
+            className={`flex-1 font-bold rounded-xl h-11 transition active:scale-[0.98] text-xs shadow-sm ${
+              canContinue()
+                ? 'bg-sky-500 hover:bg-sky-600 text-white'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-75'
+            }`}
+          >
+            {saving ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Completing…</>
+            ) : step === totalSteps - 1 ? (
+              <>Finish & Discover Partners <ArrowRight className="w-4 h-4 ml-1.5" /></>
+            ) : (
+              <>Continue <ArrowRight className="w-4 h-4 ml-1.5" /></>
+            )}
           </Button>
         </div>
       </div>
@@ -397,47 +821,115 @@ function ProfileEditor({ user, profile, onSaved }) {
 
 function GoalsMultiSelect({ value, onChange, max = 3 }) {
   const list = Array.isArray(value) ? value : []
+  const [shakingGoal, setShakingGoal] = useState('')
+
+  const triggerGoalShake = (g) => {
+    setShakingGoal(g)
+    setTimeout(() => setShakingGoal(''), 400)
+  }
+
   const toggle = (g) => {
     if (list.includes(g)) {
       onChange(list.filter(x => x !== g))
     } else {
-      if (list.length >= max) { toast.error(`Max ${max} goals`); return }
+      if (list.length >= max) {
+        triggerGoalShake(g)
+        toast.error(`Max ${max} goals`)
+        return
+      }
       onChange([...list, g])
     }
   }
+
+  const shakeVariants = {
+    shake: {
+      x: [-5, 5, -3, 3, 0],
+      transition: { duration: 0.3 }
+    }
+  }
+
   return (
     <div>
       <div className="grid grid-cols-2 gap-2.5">
         {GOALS.map(g => {
           const selected = list.includes(g)
           return (
-            <button
+            <motion.button
               key={g}
               type="button"
               onClick={() => toggle(g)}
-              className={`text-left p-3.5 rounded-2xl border transition-all duration-200 active:scale-[0.98] ${
+              variants={shakeVariants}
+              animate={shakingGoal === g ? 'shake' : 'idle'}
+              className={`text-left p-3 rounded-2xl border transition-all duration-200 active:scale-[0.98] ${
                 selected
-                  ? 'bg-sky-50 border-sky-300 text-sky-700 pending-halo font-semibold'
+                  ? 'bg-sky-50 border-sky-300 text-sky-700 font-bold shadow-[0_0_0_1px_rgba(14,165,233,0.1)]'
                   : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selected ? 'bg-sky-100 text-sky-600' : 'bg-slate-100 text-slate-400'}`}>
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  selected ? 'bg-sky-100 text-sky-600' : 'bg-slate-100 text-slate-400'
+                }`}>
                   <Target className="w-4 h-4" />
                 </div>
-                <span className="font-semibold text-sm flex-1 leading-tight">{g}</span>
-                {selected && <Check className="w-4 h-4 text-sky-600 flex-shrink-0" />}
+                <span className="font-bold text-xs flex-1 leading-tight">{g}</span>
+                {selected && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+                  >
+                    <Check className="w-4 h-4 text-sky-600 flex-shrink-0" />
+                  </motion.div>
+                )}
               </div>
-            </button>
+            </motion.button>
           )
         })}
       </div>
-      <div className="text-[11px] text-slate-400 mt-2.5 flex items-center justify-between font-medium">
+      <div className="text-[10px] text-slate-400 mt-2.5 flex items-center justify-between font-bold">
         <span>{list.length}/{max} selected</span>
         {list.length > 0 && (
           <button type="button" onClick={() => onChange([])} className="text-slate-500 hover:text-slate-700 transition">Clear</button>
         )}
       </div>
+    </div>
+  )
+}
+
+function ChoiceGrid({ options, value, onChange, icon: Icon, large }) {
+  return (
+    <div className={`grid gap-2.5 ${large ? 'grid-cols-1' : 'grid-cols-2'}`}>
+      {options.map(opt => {
+        const selected = value === opt
+        return (
+          <button
+            key={opt}
+            onClick={() => onChange(opt)}
+            className={`text-left p-4 rounded-2xl border transition-all duration-200 active:scale-[0.99] ${
+              selected
+                ? 'bg-sky-50 border-sky-300 text-sky-700 shadow-[0_0_0_1px_rgba(14,165,233,0.1)] font-bold'
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selected ? 'bg-sky-100 text-sky-600' : 'bg-slate-100 text-slate-450'}`}>
+                {Icon && <Icon className="w-5 h-5" />}
+              </div>
+              <span className="font-bold flex-1 text-xs">{opt}</span>
+              {selected && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+                >
+                  <Check className="w-5 h-5 text-sky-600" />
+                </motion.div>
+              )}
+            </div>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -529,34 +1021,6 @@ function PhotoEditorCard({ photos, setPhotos, photoUrl, setPhotoUrl, addPhoto, h
   )
 }
 
-function ChoiceGrid({ options, value, onChange, icon: Icon, large }) {
-  return (
-    <div className={`grid gap-2.5 ${large ? 'grid-cols-1' : 'grid-cols-2'}`}>
-      {options.map(opt => {
-        const selected = value === opt
-        return (
-          <button
-            key={opt}
-            onClick={() => onChange(opt)}
-            className={`text-left p-4 rounded-2xl border transition-all duration-200 active:scale-[0.99] ${
-              selected
-                ? 'bg-sky-50 border-sky-300 text-sky-700 shadow-[0_0_0_1px_rgba(14,165,233,0.1)] font-semibold'
-                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selected ? 'bg-sky-100 text-sky-600' : 'bg-slate-100 text-slate-450'}`}>
-                {Icon && <Icon className="w-5 h-5" />}
-              </div>
-              <span className="font-semibold flex-1 text-sm">{opt}</span>
-              {selected && <Check className="w-5 h-5 text-sky-600" />}
-            </div>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
 
 function ProfileCard({ profile, onLike, onSkip, onReport, index = 0 }) {
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -2092,89 +2556,31 @@ function App() {
     const tick = async () => {
       try {
         const r = await fetch('/api/matches', { credentials: 'include' })
-        const d = await r.json()
-        if (!cancelled) setPendingIncomingCount(d.pendingIncomingCount || 0)
-      } catch {}
+        const matches = await r.json()
+        if (cancelled) return
+        const pendingCount = matches.filter(m => m.status === 'pending' && m.userB === user.id).length
+        setPendingIncomingCount(pendingCount)
+      } catch (e) {
+        console.warn('[Polling] Failed to fetch matches count:', e)
+      }
     }
     tick()
-    const t = setInterval(tick, 30000)
-    return () => { cancelled = true; clearInterval(t) }
+    const timer = setInterval(tick, 30000)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
   }, [user])
 
+  // Listen to open-auth triggers from landing page
   useEffect(() => {
-    const handleOpenAuth = async (e) => {
-      const tab = e.detail?.tab || 'phone'
-      if (tab === 'google') {
-        setLoading(true)
-        try {
-          const data = await loginWithFirebaseGoogle()
-          setUser(data.user)
-          setProfile(data.profile)
-          try {
-            localStorage.setItem('trainr_logged_in', '1')
-            localStorage.setItem('trainr_cached_user', JSON.stringify(data.user))
-            localStorage.setItem('trainr_cached_profile', JSON.stringify(data.profile || null))
-          } catch {}
-          setView(data.profile ? 'discover' : 'profile-edit')
-          toast.success('Welcome back!')
-        } catch (err) {
-          console.error('[Auth] Google Login Error:', err)
-          toast.error(AUTH_ERROR_MESSAGE)
-        } finally {
-          setLoading(false)
-        }
-      } else {
-        setPhoneNumber('')
-        setRawPhone('')
-        setAuthModal({ open: true, tab: 'phone' })
-        setAuthStep(1)
-      }
+    const handleOpenAuth = (e) => {
+      const detail = e.detail || {}
+      setAuthModal({ open: true, tab: detail.tab || 'phone' })
     }
     window.addEventListener('trainr:open-auth', handleOpenAuth)
     return () => window.removeEventListener('trainr:open-auth', handleOpenAuth)
   }, [])
-
-  const handleSendOtp = async () => {
-    if (!phoneNumber.trim()) return
-    setSendingOtp(true)
-    try {
-      const result = await sendFirebasePhoneOtp(phoneNumber.trim(), 'firebase-recaptcha')
-      setConfirmationResult(result)
-      setAuthStep(2)
-      toast.success('Verification code sent!')
-    } catch (e) {
-      console.error('[Auth] Failed to send OTP:', e)
-      toast.error(OTP_SEND_ERROR_MESSAGE)
-    } finally {
-      setSendingOtp(false)
-    }
-  }
-
-  const handleVerifyOtp = async () => {
-    if (!confirmationResult || (otp.length !== 4 && otp.length !== 6)) return
-    setVerifyingOtp(true)
-    try {
-      const data = await confirmFirebasePhoneOtp(confirmationResult, otp)
-      setUser(data.user)
-      setProfile(data.profile)
-      try {
-        localStorage.setItem('trainr_logged_in', '1')
-        localStorage.setItem('trainr_cached_user', JSON.stringify(data.user))
-        localStorage.setItem('trainr_cached_profile', JSON.stringify(data.profile || null))
-      } catch {}
-      setView(data.profile ? 'discover' : 'profile-edit')
-      setAuthModal({ open: false, tab: 'phone' })
-      setAuthStep(1)
-      setPhoneNumber('')
-      setOtp('')
-      toast.success('Welcome back!')
-    } catch (e) {
-      console.error('[Auth] Failed to verify OTP:', e)
-      toast.error(OTP_VERIFY_ERROR_MESSAGE)
-    } finally {
-      setVerifyingOtp(false)
-    }
-  }
 
   // Agent 1 - Auth Fixed: session handling with timeout, error recovery, and debug logging
   useEffect(() => {
@@ -2431,92 +2837,15 @@ function App() {
 
       {user && PREMIUM_ENABLED && <PremiumDialog open={showPremium} onOpenChange={setShowPremium} onUpgraded={handlePremiumUpgraded} />}
 
-      <Dialog open={authModal.open} onOpenChange={(o) => {
-        if (!o) {
-          setAuthModal({ open: false, tab: 'phone' })
-          setAuthStep(1)
-          setPhoneNumber('')
-          setRawPhone('')
-          setOtp('')
-        }
-      }}>
-        <DialogContent className="bg-white border-slate-200 max-w-sm rounded-2xl p-6 max-sm:top-[12%] max-sm:translate-y-0">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-extrabold text-slate-800">Phone Authentication</DialogTitle>
-          </DialogHeader>
-          
-          {authStep === 1 ? (
-            <div className="space-y-4 mt-2">
-              <p className="text-sm text-slate-550 leading-relaxed font-semibold">Enter your 10-digit mobile number to receive a verification code.</p>
-              <div className="space-y-1.5">
-                <Label htmlFor="phone-input" className="text-xs font-bold text-slate-700">Phone Number</Label>
-                <div className="flex rounded-xl border border-slate-200/80 focus-within:ring-2 focus-within:ring-sky-500 overflow-hidden bg-slate-50">
-                  <span className="bg-slate-100 flex items-center justify-center px-3 text-sm font-bold text-slate-700 border-r border-slate-200/80 select-none">
-                    +91
-                  </span>
-                  <Input
-                    id="phone-input"
-                    type="tel"
-                    placeholder="XXXXXXXXXX"
-                    value={rawPhone}
-                    onChange={(e) => {
-                      let val = e.target.value.replace(/\D/g, '')
-                      if (val.startsWith('91') && val.length > 10) {
-                        val = val.slice(2)
-                      }
-                      val = val.slice(0, 10)
-                      setRawPhone(val)
-                      setPhoneNumber(val ? '+91' + val : '')
-                    }}
-                    className="bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-slate-800 flex-1 h-11 shadow-none"
-                  />
-                </div>
-              </div>
-              <Button
-                onClick={handleSendOtp}
-                disabled={sendingOtp || !phoneNumber.trim()}
-                className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl h-11 transition active:scale-[0.98]"
-              >
-                {sendingOtp ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending OTP…</> : 'Send OTP'}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4 mt-2">
-              <p className="text-sm text-slate-550 leading-relaxed font-semibold">We sent a verification code to <strong className="text-slate-800">{phoneNumber}</strong>. Enter it below to verify.</p>
-              <div className="space-y-1.5">
-                <Label htmlFor="otp-input" className="text-xs font-bold text-slate-700">Verification Code</Label>
-                <Input
-                  id="otp-input"
-                  type="text"
-                  maxLength={6}
-                  placeholder="0000"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  className="bg-slate-50 border border-slate-200/80 focus-visible:ring-sky-500 text-center tracking-widest text-lg font-bold text-slate-800"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => setAuthStep(1)}
-                  variant="outline"
-                  className="flex-1 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl h-11"
-                >
-                  Back
-                </Button>
-                <Button
-                  onClick={handleVerifyOtp}
-                  disabled={verifyingOtp || (otp.length !== 4 && otp.length !== 6)}
-                  className="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl h-11 transition active:scale-[0.98]"
-                >
-                  {verifyingOtp ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifying…</> : 'Verify'}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <div id="firebase-recaptcha" className="hidden" />
+      <AuthDialog
+        open={authModal.open}
+        onOpenChange={(o) => setAuthModal(prev => ({ ...prev, open: o }))}
+        onAuthSuccess={(data) => {
+          setUser(data.user)
+          setProfile(data.profile)
+          setView(data.profile ? 'discover' : 'profile-edit')
+        }}
+      />
     </div>
   )
 }

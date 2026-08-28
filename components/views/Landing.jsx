@@ -1,4 +1,5 @@
 'use client'
+import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -9,51 +10,100 @@ import { LOGO, INSTAGRAM_URL, SUPPORT_EMAIL } from '@/lib/client/constants'
 import { loginWithGoogle } from '@/lib/client/utils'
 
 export default function Landing({ onNav }) {
+  // Hero stagger variants
+  const heroContainer = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.05
+      }
+    }
+  }
+
+  const heroItem = {
+    hidden: { opacity: 0, y: 16 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' } }
+  }
+
   return (
     <div className="pt-16 bg-[#F8FAFC]">
       <section className="relative overflow-hidden bg-gradient-to-b from-sky-500/5 via-transparent to-transparent">
         <div className="absolute inset-0 grid-bg opacity-40" />
         <div className="relative max-w-7xl mx-auto px-4 md:px-6 pt-20 md:pt-28 pb-16 md:pb-24">
           <div className="grid md:grid-cols-2 gap-10 items-center">
-            <div className="fade-up">
-              <Badge className="mb-5 bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 rounded-full px-3 py-1 font-semibold text-xs transition">
-                <Sparkles className="w-3.5 h-3.5 mr-1.5 text-sky-500" /> Premium fitness network
-              </Badge>
-              <h1 className="text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight text-slate-900">
+            
+            {/* Left Column: Staggered Content */}
+            <motion.div
+              variants={heroContainer}
+              initial="hidden"
+              animate="show"
+              className="space-y-6"
+            >
+              <motion.div variants={heroItem}>
+                <Badge className="bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 rounded-full px-3 py-1 font-semibold text-xs transition">
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5 text-sky-500" /> Premium fitness network
+                </Badge>
+              </motion.div>
+              
+              <motion.h1 variants={heroItem} className="text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight text-slate-900">
                 Find your <span className="text-gradient">gym partner.</span>
-              </h1>
-              <p className="mt-6 text-lg md:text-xl text-slate-600 max-w-lg leading-relaxed font-medium">
+              </motion.h1>
+              
+              <motion.p variants={heroItem} className="text-lg md:text-xl text-slate-600 max-w-lg leading-relaxed font-medium">
                 Built for accountability, not dating.
-              </p>
-              <div className="mt-8 flex flex-col sm:flex-row gap-3 flex-wrap">
-                <Button onClick={loginWithGoogle} size="lg" className="bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0284C7] hover:to-[#0369a1] text-white font-semibold rounded-full h-12 px-6 text-sm shadow-md shadow-sky-500/10 transition active:scale-[0.98]">
-                  Continue with Google
-                </Button>
-                <Button onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('trainr:open-auth', { detail: { tab: 'phone' } }))
-                  }
-                }} size="lg" className="bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-full h-12 px-6 text-sm shadow-md transition active:scale-[0.98]">
-                  Continue with Phone
-                </Button>
-                <Button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} variant="outline" size="lg" className="rounded-full h-12 px-6 text-sm border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition">
-                  Explore Features
-                </Button>
-              </div>
+              </motion.p>
+              
+              <motion.div variants={heroItem} className="flex flex-col sm:flex-row gap-3 flex-wrap pt-2">
+                <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+                  <Button onClick={loginWithGoogle} size="lg" className="w-full sm:w-auto bg-gradient-to-r from-[#0EA5E9] to-[#0284C7] hover:from-[#0284C7] hover:to-[#0369a1] text-white font-semibold rounded-full h-12 px-6 text-sm shadow-md shadow-sky-500/10">
+                    Continue with Google
+                  </Button>
+                </motion.div>
+                
+                <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+                  <Button onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('trainr:open-auth', { detail: { tab: 'phone' } }))
+                    }
+                  }} size="lg" className="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-full h-12 px-6 text-sm shadow-md">
+                    Continue with Phone
+                  </Button>
+                </motion.div>
+                
+                <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+                  <Button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} variant="outline" size="lg" className="w-full sm:w-auto rounded-full h-12 px-6 text-sm border-slate-300 bg-white hover:bg-slate-50 text-slate-700">
+                    Explore Features
+                  </Button>
+                </motion.div>
+              </motion.div>
               
               {/* Trust Strip */}
-              <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-slate-600 bg-slate-100/60 border border-slate-200/50 rounded-2xl p-4 font-medium">
+              <motion.div
+                variants={heroItem}
+                className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-slate-600 bg-slate-100/60 border border-slate-200/50 rounded-2xl p-4 font-medium"
+              >
                 <div className="flex items-center gap-2"><BadgeCheck className="w-4 h-4 text-sky-500" /> Verified profiles</div>
                 <div className="flex items-center gap-2"><Target className="w-4 h-4 text-emerald-500" /> Matched by gym & goals</div>
                 <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-sky-500" /> Safety-first community</div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
 
-            {/* Premium Mockup Graphic */}
-            <div className="relative fade-up" style={{ animationDelay: '0.15s' }}>
+            {/* Right Column: Premium Mockup Graphic with floating animations */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
+              className="relative"
+            >
               <div className="relative aspect-[4/5] rounded-3xl overflow-hidden bg-gradient-to-br from-sky-100/80 via-white to-emerald-50/50 border border-slate-200 shadow-xl flex flex-col items-center justify-center p-6 md:p-8">
-                {/* Visual Representation of Gym Partner Card */}
-                <div className="w-full max-w-[270px] bg-white rounded-2xl border border-slate-200/80 shadow-lg p-5 space-y-4 animate-float">
+                {/* Visual Representation of Gym Partner Card - Floating */}
+                <motion.div
+                  animate={{ y: [-6, 6, -6] }}
+                  transition={{ repeat: Infinity, duration: 4.5, ease: 'easeInOut' }}
+                  className="w-full max-w-[270px] bg-white rounded-2xl border border-slate-200/80 shadow-lg p-5 space-y-4"
+                >
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
@@ -74,17 +124,26 @@ export default function Landing({ onNav }) {
                     <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-0.5">Why you match</div>
                     Same workouts goals, schedule & home gym
                   </div>
-                </div>
+                </motion.div>
               </div>
 
               {/* Floating Badges */}
-              <div className="absolute -top-4 -right-4 bg-white border border-slate-200 shadow-md rounded-2xl px-4 py-3 animate-float" style={{ animationDelay: '1s' }}>
+              <motion.div
+                animate={{ y: [4, -4, 4] }}
+                transition={{ repeat: Infinity, duration: 3.8, ease: 'easeInOut' }}
+                className="absolute -top-4 -right-4 bg-white border border-slate-200 shadow-md rounded-2xl px-4 py-3"
+              >
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-[#10B981] animate-pulse" />
                   <span className="text-xs font-semibold text-slate-700">12 active near you</span>
                 </div>
-              </div>
-              <div className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur border border-slate-200/80 rounded-2xl p-4 shadow-lg animate-float" style={{ animationDelay: '2s' }}>
+              </motion.div>
+
+              <motion.div
+                animate={{ y: [-4, 4, -4] }}
+                transition={{ repeat: Infinity, duration: 4.2, ease: 'easeInOut' }}
+                className="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur border border-slate-200/80 rounded-2xl p-4 shadow-lg"
+              >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-sky-50 border border-sky-100 flex items-center justify-center"><Flame className="w-5 h-5 text-[#0EA5E9]" /></div>
                   <div>
@@ -92,8 +151,8 @@ export default function Landing({ onNav }) {
                     <div className="text-xs text-slate-500">Same goal · Powerlifting · 6AM</div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </section>

@@ -131,17 +131,17 @@ export default function SelfieVerifyDialog({ open, onOpenChange, onVerified, pro
         throw new Error('No face detected in your profile photos. Make sure your profile photos clearly show your face.')
       }
 
-      // 3. Matching logic (SSD Mobilenet v1 is highly accurate; threshold 0.55 ensures strict matching)
+      // 3. Matching logic (SSD Mobilenet v1 is highly accurate; threshold 0.45 ensures strict matching)
       const distance = bestDistance
-      const verified = distance < 0.55
+      const verified = distance < 0.45
       
       // Calculate match score percentage
       let score = Math.round((1 - distance) * 100)
       if (verified) {
-        // Map distance < 0.55 to score > 60%
-        score = Math.max(score, Math.round(60 + (0.55 - distance) * 80))
+        // Map distance < 0.45 to score >= 70%
+        score = Math.max(score, Math.round(70 + (0.45 - distance) * 54))
       } else {
-        score = Math.min(score, 59)
+        score = Math.min(score, 69)
       }
       setMatchScore(score)
 
