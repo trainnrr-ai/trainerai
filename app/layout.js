@@ -1,6 +1,8 @@
 import './globals.css'
+import Script from 'next/script'
 import { Toaster } from '@/components/ui/sonner'
 
+const GA_MEASUREMENT_ID = 'G-YJFNPYSLY4'
 const OG_IMAGE = '/opengraph-image'
 
 export const metadata = {
@@ -42,6 +44,20 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: 'window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);' }} />
       </head>
       <body>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}', {
+              page_path: window.location.pathname,
+            });
+          `}
+        </Script>
         <noscript>
           <div style={{ padding: 16, textAlign: 'center', fontFamily: 'Inter, system-ui, sans-serif' }}>
             Trainr needs JavaScript to help you find and message verified gym partners.
