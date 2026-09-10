@@ -5,26 +5,29 @@ const OG_IMAGE = '/opengraph-image'
 
 export const metadata = {
   metadataBase: new URL('https://trainr.in'),
-  title: 'Trainr — Built for accountability, not dating',
-  description: "Find verified gym partners nearby, matched by goals, schedule and experience. India's premium fitness accountability network.",
+  title: 'Find Gym Partners Near You | Trainr',
+  description: 'Find compatible workout partners nearby based on your fitness goals, gym, schedule and experience. Build a routine you can actually stick to with Trainr.',
+  alternates: {
+    canonical: 'https://trainr.in',
+  },
   icons: {
     icon: [{ url: '/favicon.svg?v=2', type: 'image/svg+xml' }],
     apple: [{ url: '/apple-touch-icon.svg?v=2' }],
     shortcut: [{ url: '/favicon.svg?v=2' }],
   },
   openGraph: {
-    title: 'Trainr — Built for accountability, not dating',
-    description: "Find verified gym partners nearby, matched by goals, schedule and experience. India's premium fitness accountability network.",
+    title: 'Find Gym Partners Near You | Trainr',
+    description: 'Find compatible workout partners nearby based on your fitness goals, gym, schedule and experience. Build a routine you can actually stick to with Trainr.',
     url: 'https://trainr.in',
     siteName: 'Trainr',
-    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: 'Trainr accountability network' }],
-    locale: 'en_US',
+    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: 'Trainr - Find Gym Partners Near You' }],
+    locale: 'en_IN',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Trainr — Built for accountability, not dating',
-    description: "Find verified gym partners nearby, matched by goals, schedule and experience. India's premium fitness accountability network.",
+    title: 'Find Gym Partners Near You | Trainr',
+    description: 'Find compatible workout partners nearby based on your fitness goals, gym, schedule and experience. Build a routine you can actually stick to with Trainr.',
     images: [OG_IMAGE],
   },
 }

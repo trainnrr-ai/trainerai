@@ -44,7 +44,10 @@ const Landing = dynamic(() => import('@/components/views/Landing'), {
 })
 const AuthDialog = dynamic(() => import('@/components/views/AuthDialog'), { ssr: false })
 const AboutView = dynamic(() => import('@/components/views/AboutView'), { ssr: false })
+const SafetyView = dynamic(() => import('@/components/views/SafetyView'), { ssr: false })
+const FAQView = dynamic(() => import('@/components/views/FAQView'), { ssr: false })
 const PrivacyView = dynamic(() => import('@/components/views/PrivacyView'), { ssr: false })
+const TermsView = dynamic(() => import('@/components/views/TermsView'), { ssr: false })
 const ContactView = dynamic(() => import('@/components/views/ContactView'), { ssr: false })
 const SelfieVerifyDialog = dynamic(() => import('@/components/views/SelfieVerifyDialog'), { ssr: false })
 const AdminView = dynamic(() => import('@/components/views/AdminView'), { ssr: false })
@@ -2826,7 +2829,10 @@ function App() {
       )}
       {!user && view === 'landing' && <Landing onNav={setView} />}
       {!user && view === 'about' && <AboutView onNav={setView} />}
+      {!user && view === 'safety' && <SafetyView onNav={setView} />}
+      {!user && view === 'faq' && <FAQView onNav={setView} />}
       {!user && view === 'privacy' && <PrivacyView onNav={setView} />}
+      {!user && view === 'terms' && <TermsView onNav={setView} />}
       {!user && view === 'contact' && <ContactView onNav={setView} />}
       {user && view === 'profile-edit' && <ProfileEditor user={user} profile={profile} onSaved={handleProfileSaved} />}
       {user && view === 'discover' && (profile ? <Discover /> : <ProfileEditor user={user} profile={null} onSaved={handleProfileSaved} />)}
