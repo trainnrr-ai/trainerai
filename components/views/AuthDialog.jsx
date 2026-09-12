@@ -26,7 +26,7 @@ export default function AuthDialog({ open, onOpenChange, onAuthSuccess }) {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [authStep, setAuthStep] = useState(1) // 1 = Phone input, 2 = OTP input
   const [confirmationResult, setConfirmationResult] = useState(null)
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', ''])
+  const [otpDigits, setOtpDigits] = useState(['', '', '', ''])
   const [resendTimer, setResendTimer] = useState(0)
   const otpInputsRef = useRef([])
 
@@ -62,7 +62,7 @@ export default function AuthDialog({ open, onOpenChange, onAuthSuccess }) {
       setPhoneNumber('')
       setAuthStep(1)
       setConfirmationResult(null)
-      setOtpDigits(['', '', '', '', '', ''])
+      setOtpDigits(['', '', '', ''])
       setEmail('')
       setPassword('')
       setConfirmPassword('')
@@ -123,9 +123,9 @@ export default function AuthDialog({ open, onOpenChange, onAuthSuccess }) {
   // Verify Phone OTP
   const handleVerifyOtp = async () => {
     const code = otpDigits.join('')
-    if (code.length !== 6) {
+    if (code.length !== 4) {
       triggerShake('otp')
-      toast.error('Enter the complete 6-digit code')
+      toast.error('Enter the complete 4-digit code')
       return
     }
     setLoading(true)
@@ -148,7 +148,7 @@ export default function AuthDialog({ open, onOpenChange, onAuthSuccess }) {
   // Resend OTP handler
   const handleResendOtp = async () => {
     if (resendTimer > 0) return
-    setOtpDigits(['', '', '', '', '', ''])
+    setOtpDigits(['', '', '', ''])
     await handleSendOtp()
   }
 
@@ -168,7 +168,7 @@ export default function AuthDialog({ open, onOpenChange, onAuthSuccess }) {
       }, 150)
     }
 
-    if (sanitized && idx < 5) {
+    if (sanitized && idx < 3) {
       otpInputsRef.current[idx + 1]?.focus()
     }
   }
@@ -414,8 +414,8 @@ export default function AuthDialog({ open, onOpenChange, onAuthSuccess }) {
                         animate={shakeField === 'otp' ? 'shake' : 'idle'}
                         className="space-y-2.5"
                       >
-                        <Label className="text-xs font-bold text-slate-700">6-Digit Verification Code</Label>
-                        <div className="flex items-center justify-between gap-1.5">
+                        <Label className="text-xs font-bold text-slate-700">4-Digit Verification Code</Label>
+                        <div className="flex items-center justify-center gap-3">
                           {otpDigits.map((digit, idx) => (
                             <input
                               key={idx}
@@ -427,7 +427,7 @@ export default function AuthDialog({ open, onOpenChange, onAuthSuccess }) {
                               value={digit}
                               onChange={(e) => handleOtpChange(e.target.value, idx)}
                               onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                              className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200/80 text-center text-lg font-black text-slate-800 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition-all"
+                              className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200/80 text-center text-xl font-black text-slate-800 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition-all"
                             />
                           ))}
                         </div>
@@ -443,7 +443,7 @@ export default function AuthDialog({ open, onOpenChange, onAuthSuccess }) {
                         </Button>
                         <Button
                           onClick={handleVerifyOtp}
-                          disabled={loading || otpDigits.join('').length < 6}
+                          disabled={loading || otpDigits.join('').length < 4}
                           className="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl h-11 transition active:scale-[0.98]"
                         >
                           {loading ? (
