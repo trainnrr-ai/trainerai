@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -959,9 +960,10 @@ function PhotoEditorCard({ photos, setPhotos, photoUrl, setPhotoUrl, addPhoto, h
         {photos.map((p, i) => {
           const isMain = i === 0
           const isOver = overIdx === i && dragIdx !== null && dragIdx !== i
+          const photoKey = typeof p === 'string' ? p.slice(-20) : i
           return (
             <div
-              key={`${i}-${p.slice(-20)}`}
+              key={`${i}-${photoKey}`}
               draggable
               onDragStart={(e) => { setDragIdx(i); e.dataTransfer.effectAllowed = 'move' }}
               onDragOver={(e) => { e.preventDefault(); if (overIdx !== i) setOverIdx(i) }}
